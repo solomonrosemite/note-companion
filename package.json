@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
+    "node-gyp": "^11.1.0",
     "turbo": "latest",
     "typescript": "^5.2.2"
   },
