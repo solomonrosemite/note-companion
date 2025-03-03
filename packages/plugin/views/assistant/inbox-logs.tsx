@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePlugin } from "./provider";
 import { Inbox } from "../../inbox";
 import { VALID_MEDIA_EXTENSIONS, VALID_AUDIO_EXTENSIONS, VALID_IMAGE_EXTENSIONS } from "../../constants";
+import { TFile, Notice } from "obsidian";
 
 // Add a tooltip component for error details
 const ErrorTooltip: React.FC<{ error: LogEntry["error"] }> = ({
@@ -187,10 +188,13 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
     return ts ? moment(ts).format("HH:mm:ss") : "";
   };
   
+  // Get file extension
+  const fileExtension = record.originalName.split('.').pop()?.toLowerCase() || '';
+  
   // Check for specific actions in the logs
   const hasTranscribedAudio = Object.keys(record.logs).some(action => 
     action.includes("EXTRACT_DONE") && 
-    VALID_AUDIO_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
+    VALID_AUDIO_EXTENSIONS.some(ext => fileExtension === ext)
   );
   
   const audioTimestamp = hasTranscribedAudio ? 
@@ -198,7 +202,7 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
   
   const hasProcessedImage = Object.keys(record.logs).some(action => 
     action.includes("EXTRACT_DONE") && 
-    VALID_IMAGE_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
+    VALID_IMAGE_EXTENSIONS.some(ext => fileExtension === ext)
   );
   
   const imageTimestamp = hasProcessedImage ? 
@@ -209,9 +213,9 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
   );
   
   const youtubeTimestamp = hasYouTubeTranscript ? 
-    getActionTimestamp("FETCH_YOUTUBE") : null;
+    getActionTimestamp("FETCH_YOUTUBE_DONE") : null;
     
-  const hasFormatted = Object.keys(record.logs).some(action => 
+  const hasFormatted = record.formatted || Object.keys(record.logs).some(action => 
     action.includes("FORMATTING_DONE")
   );
   
@@ -288,7 +292,22 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
       {hasFormatted && (
         <div className="text-sm">
           Note formatted as{" "}
-          <span className="text-[--text-accent]">
+          <span 
+            className="text-[--text-accent] cursor-pointer hover:underline"
+            onClick={() => {
+              // Open the template file when clicked
+              if (record.classification) {
+                const templatePath = `${plugin.settings.templatePaths}/${record.classification}.md`;
+                const templateFile = plugin.app.vault.getAbstractFileByPath(templatePath);
+                if (templateFile) {
+                  plugin.app.workspace.getLeaf().openFile(templateFile as TFile);
+                } else {
+                  // If template file not found, show notification
+                  new Notice(`Template file not found: ${templatePath}`);
+                }
+              }
+            }}
+          >
             {record.classification || "document"}
           </span>
           {" "}
