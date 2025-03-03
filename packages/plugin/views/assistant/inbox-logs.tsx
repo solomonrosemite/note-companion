@@ -20,7 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlugin } from "./provider";
 import { Inbox } from "../../inbox";
-import { VALID_MEDIA_EXTENSIONS } from "../../constants";
+import { VALID_MEDIA_EXTENSIONS, VALID_AUDIO_EXTENSIONS, VALID_IMAGE_EXTENSIONS } from "../../constants";
 
 // Add a tooltip component for error details
 const ErrorTooltip: React.FC<{ error: LogEntry["error"] }> = ({
@@ -175,34 +175,34 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
   const hasMove = record.newPath;
   
   // Helper function to find action logs and get timestamps
-  const getActionTimestamp = (actionType: string): string | null => {
-    const actionLog = Object.entries(record.logs).find(([action, _]) => 
-      action.includes(actionType)
+  const getActionTimestamp = (actionContains: string): string | null => {
+    const found = Object.entries(record.logs).find(
+      ([actionKey]) => actionKey.includes(actionContains)
     );
-    return actionLog ? (actionLog[1] as LogEntry).timestamp : null;
+    return found ? (found[1] as LogEntry).timestamp : null;
   };
   
   // Format timestamp using moment
-  const formatTimestamp = (timestamp: string | null): string => {
-    return timestamp ? moment(timestamp).format("HH:mm:ss") : "";
+  const formatTimestamp = (ts: string | null): string => {
+    return ts ? moment(ts).format("HH:mm:ss") : "";
   };
   
   // Check for specific actions in the logs
   const hasTranscribedAudio = Object.keys(record.logs).some(action => 
-    action.includes("EXTRACT") && 
-    VALID_MEDIA_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
+    action.includes("EXTRACT_DONE") && 
+    VALID_AUDIO_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
   );
   
   const audioTimestamp = hasTranscribedAudio ? 
-    getActionTimestamp("EXTRACT") : null;
+    getActionTimestamp("EXTRACT_DONE") : null;
   
   const hasProcessedImage = Object.keys(record.logs).some(action => 
-    action.includes("EXTRACT") && 
-    ['jpg', 'jpeg', 'png', 'gif'].includes(record.originalName.split('.').pop() || '')
+    action.includes("EXTRACT_DONE") && 
+    VALID_IMAGE_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
   );
   
   const imageTimestamp = hasProcessedImage ? 
-    getActionTimestamp("EXTRACT") : null;
+    getActionTimestamp("EXTRACT_DONE") : null;
   
   const hasYouTubeTranscript = Object.keys(record.logs).some(action => 
     action.includes("FETCH_YOUTUBE")
@@ -212,11 +212,11 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
     getActionTimestamp("FETCH_YOUTUBE") : null;
     
   const hasFormatted = Object.keys(record.logs).some(action => 
-    action.includes("FORMATTING")
+    action.includes("FORMATTING_DONE")
   );
   
   const formattingTimestamp = hasFormatted ? 
-    getActionTimestamp("FORMATTING") : null;
+    getActionTimestamp("FORMATTING_DONE") : null;
   
   if (!hasRename && !hasMove && !hasTranscribedAudio && !hasProcessedImage && 
       record.tags.length === 0 && !hasYouTubeTranscript && !hasFormatted) {
@@ -239,6 +239,10 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
           >
             {record.newName}
           </span>
+          {" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(getActionTimestamp("RENAME_DONE"))}
+          </span>
         </div>
       )}
       
@@ -255,6 +259,10 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
             }
           >
             {record.newPath}
+          </span>
+          {" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(getActionTimestamp("MOVING_DONE"))}
           </span>
         </div>
       )}
