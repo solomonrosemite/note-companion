@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlugin } from "./provider";
 import { Inbox } from "../../inbox";
+import { VALID_MEDIA_EXTENSIONS } from "../../constants";
 
 // Add a tooltip component for error details
 const ErrorTooltip: React.FC<{ error: LogEntry["error"] }> = ({
@@ -167,47 +168,99 @@ const PathDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
   );
 };
 
+// Add this component for essential information display
+const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
+  const plugin = usePlugin();
+  const hasRename = record.newName && record.originalName !== record.newName;
+  const hasMove = record.newPath;
+  
+  // Check for specific actions in the logs
+  const hasTranscribedAudio = Object.keys(record.logs).some(action => 
+    action.includes("EXTRACT") && 
+    VALID_MEDIA_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
+  );
+  
+  const hasProcessedImage = Object.keys(record.logs).some(action => 
+    action.includes("EXTRACT") && 
+    ['jpg', 'jpeg', 'png', 'gif'].includes(record.originalName.split('.').pop() || '')
+  );
+  
+  const hasYouTubeTranscript = Object.keys(record.logs).some(action => 
+    action.includes("FETCH_YOUTUBE")
+  );
+  
+  if (!hasRename && !hasMove && !hasTranscribedAudio && !hasProcessedImage && 
+      record.tags.length === 0 && !hasYouTubeTranscript) {
+    return null;
+  }
+  
+  return (
+    <div className="space-y-2">
+      {hasRename && (
+        <div className="text-sm">
+          Renamed as{" "}
+          <span 
+            className="text-[--text-accent] cursor-pointer hover:underline"
+            onClick={() => 
+              plugin.app.workspace.openLinkText(
+                record.newName || '',
+                record.file?.parent?.path || ''
+              )
+            }
+          >
+            {record.newName}
+          </span>
+        </div>
+      )}
+      
+      {hasMove && (
+        <div className="text-sm">
+          Moved to{" "}
+          <span 
+            className="text-[--text-accent] cursor-pointer hover:underline"
+            onClick={() => 
+              plugin.app.workspace.openLinkText(
+                record.file?.basename || '',
+                record.newPath || ''
+              )
+            }
+          >
+            {record.newPath}
+          </span>
+        </div>
+      )}
+      
+      {hasTranscribedAudio && (
+        <div className="text-sm">
+          Transcribed audio
+        </div>
+      )}
+      
+      {hasProcessedImage && (
+        <div className="text-sm">
+          Processed image
+        </div>
+      )}
+      
+      {record.tags.length > 0 && (
+        <div className="text-sm">
+          Added tags:{" "}
+          {record.tags.join(', ')}
+        </div>
+      )}
+      
+      {hasYouTubeTranscript && (
+        <div className="text-sm">
+          Extracted YouTube transcript
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Main file card component
 function FileCard({ record }: { record: FileRecord }) {
   const plugin = usePlugin();
-  const [isExpanded, setIsExpanded] = React.useState(false);
-
-  // Create a stable key for memoization
-  const logsKey = React.useMemo(() => {
-    return Object.entries(record.logs)
-      .map(([action, log]) => `${action}-${log.timestamp}`)
-      .join('|');
-  }, [record.logs]);
-
-  // Memoize sorted logs using the stable key
-  const sortedLogs = React.useMemo(() => {
-    return Object.entries(record.logs)
-      .sort(([_, a], [__, b]) => 
-        moment(b.timestamp).diff(moment(a.timestamp))
-      )
-      .map(([action, log]) => [action as Action, log] as [Action, LogEntry]);
-  }, [logsKey]);
-
-  // Add status indicators - only show when present
-  const StatusIndicators = () => {
-    const hasStatus = record.classification || record.tags.length > 0;
-    if (!hasStatus) return null;
-
-    return (
-      <div className="flex items-center gap-2">
-        {record.classification && (
-          <span className="px-2 py-0.5 rounded-full text-xs bg-[--background-modifier-success] text-[--text-on-accent]">
-            Classified
-          </span>
-        )}
-        {record.tags.length > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-xs bg-[--background-modifier-success] text-[--text-on-accent]">
-            Tagged
-          </span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <motion.div
@@ -223,8 +276,8 @@ function FileCard({ record }: { record: FileRecord }) {
                 className="cursor-pointer"
                 onClick={() =>
                   plugin.app.workspace.openLinkText(
-                    record.file?.basename,
-                    record.file?.parent.path
+                    record.file?.basename || '',
+                    record.file?.parent?.path || ''
                   )
                 }
               >
@@ -232,64 +285,11 @@ function FileCard({ record }: { record: FileRecord }) {
               </div>
               <StatusBadge status={record.status} />
             </div>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-2 text-[--text-muted]"
-            >
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  isExpanded ? "rotate-180" : ""
-                }`}
-              />
-            </button>
           </div>
 
-          {/* Status indicators - only shown when present */}
-          <StatusIndicators />
-
-          {/* Path display */}
-          <PathDisplay record={record} />
-
-          {/* Always visible info - only when present */}
-          <div className="space-y-2">
-            {record.classification && (
-              <div className="text-sm">
-                Classification:{" "}
-                <span className="text-[--text-accent]">
-                  {record.classification}
-                </span>
-              </div>
-            )}
-            {record.tags.length > 0 && (
-              <div className="flex gap-1 flex-wrap">
-                {record.tags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 bg-[--background-secondary] rounded-full text-xs"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Essential information display */}
+          <EssentialInfoDisplay record={record} />
         </div>
-
-        {/* Expanded logs */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mt-4 space-y-1 border-t border-[--background-modifier-border] pt-4"
-            >
-              {sortedLogs.map(([action, log]) => (
-                <LogEntryDisplay key={action} entry={log} step={action} />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
