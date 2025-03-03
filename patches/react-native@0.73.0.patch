@@ -1,0 +1,32 @@
+diff --git a/node_modules/react-native/scripts/cocoapods/utils.rb b/node_modules/react-native/scripts/cocoapods/utils.rb
+index 1c42dd3..2c46dd4 100644
+--- a/node_modules/react-native/scripts/cocoapods/utils.rb
++++ b/node_modules/react-native/scripts/cocoapods/utils.rb
+@@ -85,6 +85,16 @@ class ReactNativePodsUtils
+   # This is used by the New Architecture to conditionally install the proper dependencies and code.
+   @@new_arch_enabled = false
+ 
++  # This method ensures the RCTThirdPartyFabricComponentsProvider.mm file exists
++  # to prevent "Build input file cannot be found" errors
++  def self.ensure_fabric_provider_exists()
++    fabric_provider_path = File.join("node_modules", "react-native", "React", "Fabric", "RCTThirdPartyFabricComponentsProvider.mm")
++    unless File.exist?(fabric_provider_path)
++      FileUtils.mkdir_p(File.dirname(fabric_provider_path))
++      File.write(fabric_provider_path, "// Auto-generated stub file\n#import \"RCTThirdPartyFabricComponentsProvider.h\"\nnamespace facebook {\nnamespace react {\nvoid ThirdPartyFabricComponentsProvider::registerThirdPartyComponentsIfNeeded() {}\n} // namespace react\n} // namespace facebook\n")
++    end
++  end
++
+   # This method returns a properly initialized Installer instance that will be
+   # used to install the React Native dependencies.
+   #
+@@ -156,7 +166,9 @@ class ReactNativePodsUtils
+     # ']' and that crashes the pod install. Let's make sure we escape it properly.
+     flags.gsub!('[', '\\[')
+     flags.gsub!(']', '\\]')
+-
++    
++    ensure_fabric_provider_exists()
++    
+     return {
+       :react_native_path => react_native_path,
+       :fabric_enabled => fabric_enabled,
