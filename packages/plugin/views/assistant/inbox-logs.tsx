@@ -174,23 +174,52 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
   const hasRename = record.newName && record.originalName !== record.newName;
   const hasMove = record.newPath;
   
+  // Helper function to find action logs and get timestamps
+  const getActionTimestamp = (actionType: string): string | null => {
+    const actionLog = Object.entries(record.logs).find(([action, _]) => 
+      action.includes(actionType)
+    );
+    return actionLog ? (actionLog[1] as LogEntry).timestamp : null;
+  };
+  
+  // Format timestamp using moment
+  const formatTimestamp = (timestamp: string | null): string => {
+    return timestamp ? moment(timestamp).format("HH:mm:ss") : "";
+  };
+  
   // Check for specific actions in the logs
   const hasTranscribedAudio = Object.keys(record.logs).some(action => 
     action.includes("EXTRACT") && 
     VALID_MEDIA_EXTENSIONS.includes(record.originalName.split('.').pop() || '')
   );
   
+  const audioTimestamp = hasTranscribedAudio ? 
+    getActionTimestamp("EXTRACT") : null;
+  
   const hasProcessedImage = Object.keys(record.logs).some(action => 
     action.includes("EXTRACT") && 
     ['jpg', 'jpeg', 'png', 'gif'].includes(record.originalName.split('.').pop() || '')
   );
   
+  const imageTimestamp = hasProcessedImage ? 
+    getActionTimestamp("EXTRACT") : null;
+  
   const hasYouTubeTranscript = Object.keys(record.logs).some(action => 
     action.includes("FETCH_YOUTUBE")
   );
   
+  const youtubeTimestamp = hasYouTubeTranscript ? 
+    getActionTimestamp("FETCH_YOUTUBE") : null;
+    
+  const hasFormatted = Object.keys(record.logs).some(action => 
+    action.includes("FORMATTING")
+  );
+  
+  const formattingTimestamp = hasFormatted ? 
+    getActionTimestamp("FORMATTING") : null;
+  
   if (!hasRename && !hasMove && !hasTranscribedAudio && !hasProcessedImage && 
-      record.tags.length === 0 && !hasYouTubeTranscript) {
+      record.tags.length === 0 && !hasYouTubeTranscript && !hasFormatted) {
     return null;
   }
   
@@ -232,13 +261,32 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
       
       {hasTranscribedAudio && (
         <div className="text-sm">
-          Transcribed audio
+          Transcribed audio{" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(audioTimestamp)}
+          </span>
         </div>
       )}
       
       {hasProcessedImage && (
         <div className="text-sm">
-          Processed image
+          Processed image{" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(imageTimestamp)}
+          </span>
+        </div>
+      )}
+      
+      {hasFormatted && (
+        <div className="text-sm">
+          Note formatted as{" "}
+          <span className="text-[--text-accent]">
+            {record.classification || "document"}
+          </span>
+          {" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(formattingTimestamp)}
+          </span>
         </div>
       )}
       
@@ -251,7 +299,10 @@ const EssentialInfoDisplay: React.FC<{ record: FileRecord }> = ({ record }) => {
       
       {hasYouTubeTranscript && (
         <div className="text-sm">
-          Extracted YouTube transcript
+          Extracted YouTube transcript{" "}
+          <span className="text-[--text-muted] text-xs">
+            {formatTimestamp(youtubeTimestamp)}
+          </span>
         </div>
       )}
     </div>
