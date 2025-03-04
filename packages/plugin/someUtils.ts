@@ -7,7 +7,7 @@ export function formatToSafeName(format: string) {
 export function sanitizeFileName(fileName: string): string {
   if (!fileName) return "";
   // Replace invalid characters (/, \, :, *, ?, ", <, >, |) with dashes (-)
-  return fileName.replace(/[\/\\:*?"<>|]/g, "-");
+  return fileName.replace(/[\/\\:*?"<>|]/g, " -");
 }
 export function cleanPath(path: string) {
   const trimmedPath = path.trim();
