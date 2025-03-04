@@ -741,7 +741,12 @@ export default class FileOrganizer extends Plugin {
     if (!this.isWebP(fileContent)) {
       // Compress the image if it's not a WebP
       const resizedImage = await this.compressImage(fileContent);
-      processedArrayBuffer = resizedImage.buffer;
+      // Convert the Buffer to an ArrayBuffer
+      const tempArray = new Uint8Array(resizedImage.byteLength);
+      for (let i = 0; i < resizedImage.byteLength; i++) {
+        tempArray[i] = resizedImage[i];
+      }
+      processedArrayBuffer = tempArray.buffer;
     } else {
       // If it's a WebP, use the original file content directly
       processedArrayBuffer = arrayBuffer;
