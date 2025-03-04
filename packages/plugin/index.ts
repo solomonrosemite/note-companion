@@ -211,6 +211,12 @@ export default class FileOrganizer extends Plugin {
     await this.app.vault.append(currentFile, backupLink);
   }
 
+  async appendFormattedLinkToBackupFile(backupFile: TFile, formattedFile: TFile) {
+    const formattedLink = `\n\n---\n[[${formattedFile.path} | Link to formatted file]]`;
+    
+    await this.app.vault.append(backupFile, formattedLink);
+  }
+
   async getFormatInstruction(classification: string): Promise<string> {
     // get the template file from the classification
     const templateFile = this.app.vault.getAbstractFileByPath(
@@ -297,6 +303,7 @@ export default class FileOrganizer extends Plugin {
         updateCallback
       );
       this.appendBackupLinkToCurrentFile(file, backupFile);
+      await this.appendFormattedLinkToBackupFile(backupFile, file);
 
       new Notice("Content formatted successfully", 3000);
     } catch (error) {
@@ -389,6 +396,7 @@ export default class FileOrganizer extends Plugin {
 
       // Insert reference to backup
       await this.appendBackupLinkToCurrentFile(file, backupFile);
+      await this.appendFormattedLinkToBackupFile(backupFile, file);
       new Notice("Line-by-line update done!", 3000);
     } catch (error) {
       logger.error("Error formatting content line by line:", error);
