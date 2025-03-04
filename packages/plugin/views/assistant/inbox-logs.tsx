@@ -75,6 +75,10 @@ const LogEntryDisplay: React.FC<{ entry: LogEntry; step: Action }> = ({
         return "Moving file";
       case Action.COMPLETED:
         return "Completed";
+      case Action.FETCH_YOUTUBE:
+        return "Fetching YouTube transcript";
+      case Action.FETCH_YOUTUBE_DONE:
+        return "YouTube transcript fetched";
       default:
         return step;
     }

@@ -56,6 +56,7 @@ export enum Action {
   ERROR_FORMATTING = "Failed to format content",
   ERROR_MOVING = "Failed to move file",
   FETCH_YOUTUBE = "Fetching YouTube transcript...",
+  FETCH_YOUTUBE_DONE = "YouTube transcript fetched",
   ERROR_FETCH_YOUTUBE = "Failed to fetch YouTube transcript",
 }
 
@@ -422,6 +423,7 @@ export class RecordManager {
       [Action.VALIDATE_DONE]: Action.VALIDATE,
       [Action.CONTAINER_DONE]: Action.CONTAINER,
       [Action.APPEND_DONE]: Action.APPEND,
+      [Action.FETCH_YOUTUBE_DONE]: Action.FETCH_YOUTUBE,
     };
     return reverseMap[completedStep];
   }
