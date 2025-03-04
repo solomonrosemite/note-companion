@@ -625,6 +625,14 @@ async function fetchYouTubeTranscriptStep(
         message: error.message,
         stack: error.stack,
       });
+      
+      // Check if this is a 'Transcript not available' error
+      if (error.message.includes('Transcript not available')) {
+        // Log the error but continue processing
+        logger.warn("YouTube transcript not available, continuing with processing:", error.message);
+        return context;
+      }
+      
       throw error;
     }
     // For other errors, use default error handling
