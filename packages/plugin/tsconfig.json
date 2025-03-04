@@ -5,6 +5,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment",
     "paths": {
       "@/*": ["*"],
       "@/components/*": ["components/*"]

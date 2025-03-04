@@ -24,7 +24,7 @@ import { VALID_MEDIA_EXTENSIONS, VALID_AUDIO_EXTENSIONS, VALID_IMAGE_EXTENSIONS 
 import { TFile, Notice } from "obsidian";
 
 // Add a tooltip component for error details
-const ErrorTooltip: React.FC<{ error: LogEntry["error"] }> = ({
+const ErrorTooltip: React.FC<{ error: LogEntry["error"], children: React.ReactNode }> = ({
   error,
   children,
 }) => {
