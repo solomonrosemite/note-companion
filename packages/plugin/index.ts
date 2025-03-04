@@ -1,5 +1,20 @@
 // import '../styles.css'; // Removed to prevent JS from injecting CSS
 
+// Add Node.js type declarations
+declare namespace NodeJS {
+  interface ProcessEnv {
+    NODE_ENV: 'production' | 'development' | string;
+  }
+}
+declare const process: { env: NodeJS.ProcessEnv };
+declare class Buffer {
+  constructor(arg: ArrayBuffer | string, encoding?: string);
+  toString(encoding?: string): string;
+  slice(start?: number, end?: number): Buffer;
+  byteLength: number;
+  static from(arrayBuffer: ArrayBuffer): Buffer;
+}
+
 import {
   Plugin,
   Notice,
