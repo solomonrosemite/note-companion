@@ -610,9 +610,6 @@ async function fetchYouTubeTranscriptStep(
     // Update the context content to include the transcript
     context.content += appendContent;
     
-    // Explicitly log the completion of YouTube transcript fetching
-    context.recordManager.completeAction(context.hash, Action.FETCH_YOUTUBE_DONE);
-    
     return context;
   } catch (error) {
     if (error instanceof YouTubeError) {
