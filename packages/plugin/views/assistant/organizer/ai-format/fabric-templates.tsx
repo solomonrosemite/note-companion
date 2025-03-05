@@ -229,6 +229,8 @@ export const FabricClassificationBox: React.FC<
 
       // Append the backup link to the current file
       await plugin.appendBackupLinkToCurrentFile(file, backupFile);
+      // Append the formatted link to the backup file
+      await plugin.appendFormattedLinkToBackupFile(backupFile, file);
 
       setSelectedFabricPattern(null);
       new Notice("Content formatted successfully with Fabric", 3000);

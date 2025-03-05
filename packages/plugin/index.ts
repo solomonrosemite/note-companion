@@ -1,5 +1,20 @@
 // import '../styles.css'; // Removed to prevent JS from injecting CSS
 
+// Add Node.js type declarations
+declare namespace NodeJS {
+  interface ProcessEnv {
+    NODE_ENV: 'production' | 'development' | string;
+  }
+}
+declare const process: { env: NodeJS.ProcessEnv };
+declare class Buffer {
+  constructor(arg: ArrayBuffer | string, encoding?: string);
+  toString(encoding?: string): string;
+  slice(start?: number, end?: number): Buffer;
+  byteLength: number;
+  static from(arrayBuffer: ArrayBuffer): Buffer;
+}
+
 import {
   Plugin,
   Notice,
@@ -211,6 +226,12 @@ export default class FileOrganizer extends Plugin {
     await this.app.vault.append(currentFile, backupLink);
   }
 
+  async appendFormattedLinkToBackupFile(backupFile: TFile, formattedFile: TFile) {
+    const formattedLink = `\n\n---\n[[${formattedFile.path} | Link to formatted file]]`;
+    
+    await this.app.vault.append(backupFile, formattedLink);
+  }
+
   async getFormatInstruction(classification: string): Promise<string> {
     // get the template file from the classification
     const templateFile = this.app.vault.getAbstractFileByPath(
@@ -297,6 +318,7 @@ export default class FileOrganizer extends Plugin {
         updateCallback
       );
       this.appendBackupLinkToCurrentFile(file, backupFile);
+      await this.appendFormattedLinkToBackupFile(backupFile, file);
 
       new Notice("Content formatted successfully", 3000);
     } catch (error) {
@@ -389,6 +411,7 @@ export default class FileOrganizer extends Plugin {
 
       // Insert reference to backup
       await this.appendBackupLinkToCurrentFile(file, backupFile);
+      await this.appendFormattedLinkToBackupFile(backupFile, file);
       new Notice("Line-by-line update done!", 3000);
     } catch (error) {
       logger.error("Error formatting content line by line:", error);
@@ -718,7 +741,12 @@ export default class FileOrganizer extends Plugin {
     if (!this.isWebP(fileContent)) {
       // Compress the image if it's not a WebP
       const resizedImage = await this.compressImage(fileContent);
-      processedArrayBuffer = resizedImage.buffer;
+      // Convert the Buffer to an ArrayBuffer
+      const tempArray = new Uint8Array(resizedImage.byteLength);
+      for (let i = 0; i < resizedImage.byteLength; i++) {
+        tempArray[i] = resizedImage[i];
+      }
+      processedArrayBuffer = tempArray.buffer;
     } else {
       // If it's a WebP, use the original file content directly
       processedArrayBuffer = arrayBuffer;
