@@ -193,8 +193,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <p className="file-organizer-support-text mb-4">
           Note Companion is an open-source initiative developed by two
-          brothers. If you find it valuable, please
-          {" "}
+          brothers. If you find it valuable, please{" "}
           <a
             href="https://fileorganizer2000.com/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
             target="_blank"
@@ -203,8 +202,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
           >
             consider supporting us
           </a>
-          {" "}
-          to help improve and maintain the project. Thank you!
+          {" "}to help improve and maintain the project. Thank you!
         </p>
         <p className="text-[--text-muted]">
           <a
