@@ -34,8 +34,17 @@ async function ensureAuthorizedUser(req: NextRequest) {
       return { userId, licenseKey: initialLicenseKey };
     } catch (clerkError) {
       // Fall back to API key authentication
-      const { userId } = await handleAuthorizationV2(req);
-      return { userId, licenseKey: initialLicenseKey };
+      try {
+        const { userId } = await handleAuthorizationV2(req);
+        return { userId, licenseKey: initialLicenseKey };
+      } catch (apiKeyError) {
+        // In development mode, use a default user ID
+        if (process.env.NODE_ENV === "development") {
+          return { userId: "dev-user", licenseKey: initialLicenseKey || "dev-key" };
+        } else {
+          throw apiKeyError;
+        }
+      }
     }
   } catch (error) {
     console.log("Authorization failed, creating anonymous user:", error);
