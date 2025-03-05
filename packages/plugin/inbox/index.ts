@@ -625,7 +625,10 @@ async function fetchYouTubeTranscriptStep(
         message: error.message,
         stack: error.stack,
       });
-      throw error;
+      
+      // For any YouTube error, log it but continue processing
+      logger.warn("YouTube transcript error, continuing with processing:", error.message);
+      return context;
     }
     // For other errors, use default error handling
     throw error;
