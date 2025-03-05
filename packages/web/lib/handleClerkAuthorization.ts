@@ -26,38 +26,49 @@ export async function handleClerkAuthorization(req: NextRequest) {
     return { userId: "user", isCustomer: true };
   }
   
-  // Get the session from Clerk
-  const { userId } = await auth();
-  
-  if (!userId) {
-    throw new AuthorizationError("Unauthorized: No valid session", 401);
+  try {
+    // Get the session from Clerk
+    const { userId } = await auth();
+    
+    if (!userId) {
+      throw new AuthorizationError("Unauthorized: No valid session", 401);
+    }
+    
+    // Check token usage
+    const { remaining, usageError } = await checkTokenUsage(userId);
+    
+    if (usageError) {
+      throw new AuthorizationError("Error checking token usage", 500);
+    }
+    
+    if (remaining <= 0) {
+      throw new AuthorizationError(
+        "Credits limit exceeded. Top up your credits in settings.",
+        429
+      );
+    }
+    
+    // Log the API call
+    const posthogClient = PostHogClient();
+    if (posthogClient) {
+      posthogClient.capture({
+        distinctId: userId,
+        event: "call-api",
+        properties: {
+          endpoint: req.nextUrl.pathname.replace("/api/", ""),
+        },
+      });
+    }
+    
+    return { userId };
+  } catch (error) {
+    // For development environment, if Clerk is not properly configured
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Clerk authentication error in development mode:", error);
+      return { userId: "dev-user", isCustomer: true };
+    }
+    
+    // Re-throw the error for production environment
+    throw error;
   }
-  
-  // Check token usage
-  const { remaining, usageError } = await checkTokenUsage(userId);
-  
-  if (usageError) {
-    throw new AuthorizationError("Error checking token usage", 500);
-  }
-  
-  if (remaining <= 0) {
-    throw new AuthorizationError(
-      "Credits limit exceeded. Top up your credits in settings.",
-      429
-    );
-  }
-  
-  // Log the API call
-  const posthogClient = PostHogClient();
-  if (posthogClient) {
-    posthogClient.capture({
-      distinctId: userId,
-      event: "call-api",
-      properties: {
-        endpoint: req.nextUrl.pathname.replace("/api/", ""),
-      },
-    });
-  }
-  
-  return { userId };
 }
