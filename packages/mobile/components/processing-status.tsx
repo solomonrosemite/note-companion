@@ -5,7 +5,7 @@ import { UploadStatus } from '@/utils/file-handler';
 
 interface ProcessingStatusProps {
   status: UploadStatus;
-  result?: string | null;
+  result?: string | null | { extractedText?: string, visualElements?: any };
   onRetry?: () => void;
   onBackToHome?: () => void;
   showDetails?: boolean;
@@ -43,7 +43,13 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
       {status === 'completed' && (
         <View style={styles.resultContainer}>
           <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
-          <Text style={styles.successText}>{result || 'File processed successfully'}</Text>
+          <Text style={styles.successText}>
+            {typeof result === 'string' 
+              ? result 
+              : result && typeof result === 'object' && 'extractedText' in result
+                ? result.extractedText 
+                : 'File processed successfully'}
+          </Text>
           {showDetails && (
             <Text style={styles.resultSubtext}>
               Your file has been uploaded to Note Companion AI.
@@ -65,7 +71,11 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
       {status === 'error' && (
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={24} color="#f44336" />
-          <Text style={styles.errorText}>{result || 'An error occurred'}</Text>
+          <Text style={styles.errorText}>
+            {typeof result === 'string'
+              ? result 
+              : 'An error occurred'}
+          </Text>
           <View style={styles.buttonContainer}>
             {onRetry && (
               <TouchableOpacity

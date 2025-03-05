@@ -298,7 +298,7 @@ export default function HomeScreen() {
         
         <ProcessingStatus
           status={status}
-          result={uploadResult?.text || uploadResult?.error}
+          result={uploadResult?.text !== undefined ? uploadResult.text : uploadResult?.error}
           onRetry={handleRetry}
           showDetails={true}
         />

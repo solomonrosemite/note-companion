@@ -13,7 +13,7 @@ export interface SharedFile {
 
 export interface UploadResult {
   status: UploadStatus;
-  text?: string;
+  text?: string | { extractedText?: string; visualElements?: any };
   error?: string;
   fileId?: number;
 }
