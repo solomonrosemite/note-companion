@@ -27,8 +27,17 @@ export async function POST(request: NextRequest) {
       userId = result.userId;
     } catch (clerkError) {
       // Fall back to API key authentication
-      const result = await handleAuthorizationV2(request);
-      userId = result.userId;
+      try {
+        const result = await handleAuthorizationV2(request);
+        userId = result.userId;
+      } catch (apiKeyError) {
+        // In development mode, use a default user ID
+        if (process.env.NODE_ENV === "development") {
+          userId = "dev-user";
+        } else {
+          throw apiKeyError;
+        }
+      }
     }
     
     const { content, originalContent, instructions } = await request.json();
@@ -67,4 +76,4 @@ export async function POST(request: NextRequest) {
       { status: error.status || 500 }
     );
   }
-}    
+}      

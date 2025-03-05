@@ -30,8 +30,17 @@ export async function POST(req: NextRequest) {
           userId = result.userId;
         } catch (clerkError) {
           // Fall back to API key authentication
-          const result = await handleAuthorizationV2(req);
-          userId = result.userId;
+          try {
+            const result = await handleAuthorizationV2(req);
+            userId = result.userId;
+          } catch (apiKeyError) {
+            // In development mode, use a default user ID
+            if (process.env.NODE_ENV === "development") {
+              userId = "dev-user";
+            } else {
+              throw apiKeyError;
+            }
+          }
         }
         
         const {
