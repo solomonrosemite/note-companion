@@ -25,8 +25,9 @@ const userManagementMiddleware = () =>
       console.log("isClerkProtectedRoute");
       const { userId } = await auth();
       console.log("userId", userId);
-      if (!userId) {
-        // (await auth()).redirectToSignIn();
+      if (!userId && !isApiRoute(req)) {
+        // Only redirect to sign-in for non-API routes
+        return NextResponse.redirect(new URL('/sign-in', req.url));
       }
     }
     return NextResponse.next();

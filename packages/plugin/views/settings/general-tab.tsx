@@ -24,6 +24,11 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | 'checking' | 'idle'>(
     plugin.settings.API_KEY ? 'checking' : 'idle'
   );
+  const [clerkEmail, setClerkEmail] = useState("");
+  const [clerkPassword, setClerkPassword] = useState("");
+  const [authStatus, setAuthStatus] = useState<'authenticated' | 'unauthenticated' | 'loading'>(
+    plugin.settings.CLERK_SESSION_TOKEN ? 'authenticated' : 'unauthenticated'
+  );
 
   // Check key status on mount if we have a key
   useEffect(() => {
@@ -90,31 +95,78 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-medium mb-2 mt-0">File Organizer License Key</h3>
+            <h3 className="text-lg font-medium mb-2 mt-0">File Organizer Authentication</h3>
             <p className="text-[--text-muted] mb-4">
-              Enter your license key to activate Note Companion.
+              Sign in with your File Organizer account or enter your license key.
             </p>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className={`flex-1 bg-[--background-primary] border rounded px-3 py-1.5 ${keyStatus === 'valid' ? 'border-[--text-success]' : 
-                  keyStatus === 'invalid' ? 'border-[--text-error]' : 
-                  'border-[--background-modifier-border]'}`}
-                placeholder="Enter your File Organizer License Key"
-                value={licenseKey}
-                onChange={e => handleLicenseKeyChange(e.target.value)}
-              />
-              <button 
-                onClick={handleActivate}
-                className="bg-[--interactive-accent] text-[--text-on-accent] px-4 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
-              >
-                Activate
-              </button>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-medium mb-2 mt-0">Sign in with your account</h4>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  className="w-full bg-[--background-primary] border rounded px-3 py-1.5 border-[--background-modifier-border]"
+                  placeholder="Email"
+                  value={clerkEmail}
+                  onChange={e => setClerkEmail(e.target.value)}
+                />
+                <input
+                  type="password"
+                  className="w-full bg-[--background-primary] border rounded px-3 py-1.5 border-[--background-modifier-border]"
+                  placeholder="Password"
+                  value={clerkPassword}
+                  onChange={e => setClerkPassword(e.target.value)}
+                />
+                <button 
+                  onClick={async () => {
+                    setAuthStatus('loading');
+                    const auth = await plugin.signInWithClerk(clerkEmail, clerkPassword);
+                    setAuthStatus(auth ? 'authenticated' : 'unauthenticated');
+                  }}
+                  className="w-full bg-[--interactive-accent] text-[--text-on-accent] px-4 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
+                  disabled={authStatus === 'loading'}
+                >
+                  {authStatus === 'loading' ? 'Signing in...' : 'Sign in'}
+                </button>
+                {authStatus === 'authenticated' && (
+                  <div className="flex items-center text-[--text-success] text-sm">
+                    <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Signed in successfully
+                  </div>
+                )}
+              </div>
             </div>
-            {getStatusIndicator()}
+            
+            <div className="text-center text-[--text-muted]">
+              <span>Or</span>
+            </div>
+            
+            {/* License key input */}
+            <div className="space-y-2">
+              <h4 className="font-medium mb-2 mt-0">Use a license key</h4>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={`flex-1 bg-[--background-primary] border rounded px-3 py-1.5 ${keyStatus === 'valid' ? 'border-[--text-success]' : 
+                    keyStatus === 'invalid' ? 'border-[--text-error]' : 
+                    'border-[--background-modifier-border]'}`}
+                  placeholder="Enter your File Organizer License Key"
+                  value={licenseKey}
+                  onChange={e => handleLicenseKeyChange(e.target.value)}
+                />
+                <button 
+                  onClick={handleActivate}
+                  className="bg-[--interactive-accent] text-[--text-on-accent] px-4 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
+                >
+                  Activate
+                </button>
+              </div>
+              {getStatusIndicator()}
+            </div>
           </div>
         </div>
       </div>
@@ -141,7 +193,8 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <p className="file-organizer-support-text mb-4">
           Note Companion is an open-source initiative developed by two
-          brothers. If you find it valuable, please{" "}
+          brothers. If you find it valuable, please
+          {" "}
           <a
             href="https://fileorganizer2000.com/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
             target="_blank"
@@ -149,8 +202,9 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             className="text-[--text-accent] hover:text-[--text-accent-hover]"
           >
             consider supporting us
-          </a>{" "}
-          to help improve and maintain the project. 🙏
+          </a>
+          {" "}
+          to help improve and maintain the project. Thank you!
         </p>
         <p className="text-[--text-muted]">
           <a

@@ -1,14 +1,22 @@
 import { NextResponse, NextRequest } from "next/server";
 import { db, UserUsageTable } from "@/drizzle/schema";
 import { and, eq, not } from "drizzle-orm";
-import { verifyKey } from "@unkey/api";
+import { handleClerkAuthorization } from "@/lib/handleClerkAuthorization";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "");
-    const { result } = await verifyKey(token || "");
-    console.log(result)
-    const userId = result?.ownerId;
+    let userId;
+    
+    // Try Clerk authentication first
+    try {
+      const result = await handleClerkAuthorization(request);
+      userId = result.userId;
+    } catch (clerkError) {
+      // Fall back to API key authentication
+      const result = await handleAuthorizationV2(request);
+      userId = result.userId;
+    }
 
     const userUsage = await db
       .select({

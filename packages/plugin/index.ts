@@ -50,8 +50,9 @@ import {
   moveFile,
 } from "./fileUtils";
 
-import { checkLicenseKey } from "./apiUtils";
+import { checkLicenseKey, checkClerkAuth } from "./apiUtils";
 import { makeApiRequest } from "./apiUtils";
+import { signInWithClerk, refreshClerkToken, isClerkTokenValid, ClerkAuthResponse } from "./auth/clerk";
 
 import {
   VALID_IMAGE_EXTENSIONS,
@@ -449,6 +450,48 @@ export default class FileOrganizer extends Plugin {
   }
   getApiKey(): string {
     return this.settings.API_KEY;
+  }
+  
+  async signInWithClerk(email: string, password: string): Promise<boolean> {
+    try {
+      const auth = await signInWithClerk(this.getServerUrl(), email, password);
+      if (auth) {
+        this.settings.CLERK_SESSION_TOKEN = auth.token;
+        await this.saveSettings();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      logger.error("Error signing in with Clerk:", error);
+      return false;
+    }
+  }
+
+  async refreshClerkToken(): Promise<boolean> {
+    if (!this.settings.CLERK_SESSION_TOKEN) return false;
+    
+    try {
+      const auth = await refreshClerkToken(this.getServerUrl(), this.settings.CLERK_SESSION_TOKEN);
+      if (auth) {
+        this.settings.CLERK_SESSION_TOKEN = auth.token;
+        await this.saveSettings();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      logger.error("Error refreshing Clerk token:", error);
+      return false;
+    }
+  }
+
+  async isClerkTokenValid(): Promise<boolean> {
+    if (!this.settings.CLERK_SESSION_TOKEN) return false;
+    try {
+      return await isClerkTokenValid(this.getServerUrl(), this.settings.CLERK_SESSION_TOKEN);
+    } catch (error) {
+      logger.error("Error validating Clerk token:", error);
+      return false;
+    }
   }
   async getCurrentFileLinks(file: TFile): Promise<LinkCache[]> {
     // force metadata cache to be loaded
