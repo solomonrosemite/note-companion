@@ -24,8 +24,8 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | 'checking' | 'idle'>(
     plugin.settings.API_KEY ? 'checking' : 'idle'
   );
-  const [clerkEmail, setClerkEmail] = useState("");
-  const [clerkPassword, setClerkPassword] = useState("");
+  const [clerkEmail, setClerkEmail] = useState(plugin.settings.CLERK_EMAIL || "");
+  const [clerkPassword, setClerkPassword] = useState(plugin.settings.CLERK_PASSWORD || "");
   const [authStatus, setAuthStatus] = useState<'authenticated' | 'unauthenticated' | 'loading'>(
     plugin.settings.CLERK_SESSION_TOKEN ? 'authenticated' : 'unauthenticated'
   );
@@ -110,18 +110,29 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
                   className="w-full bg-[--background-primary] border rounded px-3 py-1.5 border-[--background-modifier-border]"
                   placeholder="Email"
                   value={clerkEmail}
-                  onChange={e => setClerkEmail(e.target.value)}
+                  onChange={e => {
+                    setClerkEmail(e.target.value);
+                    plugin.settings.CLERK_EMAIL = e.target.value;
+                    plugin.saveSettings();
+                  }}
                 />
                 <input
                   type="password"
                   className="w-full bg-[--background-primary] border rounded px-3 py-1.5 border-[--background-modifier-border]"
                   placeholder="Password"
                   value={clerkPassword}
-                  onChange={e => setClerkPassword(e.target.value)}
+                  onChange={e => {
+                    setClerkPassword(e.target.value);
+                    plugin.settings.CLERK_PASSWORD = e.target.value;
+                    plugin.saveSettings();
+                  }}
                 />
                 <button 
                   onClick={async () => {
                     setAuthStatus('loading');
+                    plugin.settings.CLERK_EMAIL = clerkEmail;
+                    plugin.settings.CLERK_PASSWORD = clerkPassword;
+                    await plugin.saveSettings();
                     const auth = await plugin.signInWithClerk(clerkEmail, clerkPassword);
                     setAuthStatus(auth ? 'authenticated' : 'unauthenticated');
                   }}
