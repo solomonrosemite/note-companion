@@ -202,29 +202,9 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
       />
 
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
-        <div className="file-organizer-support-text mb-4">
-          Note Companion is an open-source initiative developed by two brothers.
-          {" "}If you find it valuable, please{" "}
-          <a
-            href="https://fileorganizer2000.com/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[--text-accent] hover:text-[--text-accent-hover]"
-          >
-            consider supporting us
-          </a>
-          {" "}to help improve and maintain the project. Thank you!
-        </div>
-        <div className="text-[--text-muted]">
-          <a
-            href="https://discord.gg/UWH53WqFuE"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[--text-accent] hover:text-[--text-accent-hover]"
-          >
-            Need help? Ask me on Discord.
-          </a>
-        </div>
+        <p className="mb-4">Note Companion is an open-source initiative developed by two brothers.</p>
+        <p className="mb-4">Support us to help improve and maintain the project.</p>
+        <p className="text-[--text-muted]">Need help? Ask on Discord.</p>
       </div>
     </div>
   );
