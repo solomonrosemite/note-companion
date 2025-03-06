@@ -1,6 +1,8 @@
 import PostHogClient from "@/lib/posthog";
 import { incrementTokenUsage } from "../drizzle/schema";
 
+
+
 export async function incrementAndLogTokenUsage(
   userId: string,
   tokens: number
