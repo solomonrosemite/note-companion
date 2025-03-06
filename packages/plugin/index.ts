@@ -118,7 +118,7 @@ export default class FileOrganizer extends Plugin {
     // if process env prod then point to prod server if not to localhost
     const serverUrl =
       process.env.NODE_ENV === "production"
-        ? "https://app.fileorganizer2000.com"
+        ? "https://app.notecompanion.ai"
         : this.getServerUrl();
     const premiumStatus = await fetch(`${serverUrl}/api/check-premium`, {
       headers: {
@@ -147,7 +147,7 @@ export default class FileOrganizer extends Plugin {
   getServerUrl(): string {
     let serverUrl = this.settings.enableSelfHosting
       ? this.settings.selfHostingURL
-      : "https://app.fileorganizer2000.com";
+      : "https://app.notecompanion.ai";
 
     // Remove trailing slash (/) at end of url if there is one; prevents errors for /api/chat requests
     serverUrl = serverUrl.replace(/\/$/, "");
