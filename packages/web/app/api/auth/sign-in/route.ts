@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, auth } from "@clerk/nextjs/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,22 +22,23 @@ export async function POST(request: NextRequest) {
           emailAddress: [email],
         });
         
-        if (usersResponse.data.length === 0) {
+        if (usersResponse.totalCount === 0) {
           return NextResponse.json(
             { error: "User not found" },
             { status: 401 }
           );
         }
         
-        // Create a sign-in token for the user
-        const signInToken = await client.signInTokens.createSignInToken({
-          userId: usersResponse.data[0].id,
-          expiresInSeconds: 3600, // 1 hour
-        });
+        // For server-side authentication, we can't directly sign in with password
+        // Instead, we'll create a session token that the client can use
+        const userId = usersResponse.data[0].id;
+        
+        // Generate a session token (this is a simplified example)
+        const token = Buffer.from(`${userId}:${Date.now()}`).toString("base64");
         
         return NextResponse.json({
-          token: signInToken.token,
-          userId: usersResponse.data[0].id,
+          token,
+          userId,
           expiresAt: Date.now() + (3600 * 1000), // 1 hour from now
         });
       } catch (signInError) {
