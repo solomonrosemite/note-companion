@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ErrorBox } from "./error-box";
 import { EmptyState } from "./empty-state";
-import FileOrganizer from "../../..";
+import FileOrganizer from "../../../../index";
 
 interface LicenseValidatorProps {
   authToken: string;
@@ -83,4 +83,4 @@ export const LicenseValidator: React.FC<LicenseValidatorProps> = ({
   }
 
   return null;
-};  
+};
