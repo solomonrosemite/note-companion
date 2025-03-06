@@ -80,7 +80,7 @@ export default function Page() {
            {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <a href="https://app.fileorganizer2000.com">
+            <a href="https://app.notecompanion.ai">
               <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
                 Start free trial
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -384,7 +384,7 @@ export default function Page() {
               Get Note Companion and enjoy a 7-day free trial on the yearly plan. Bring order to your Obsidian vault. Stop wrestling with messy notes and let AI handle the tedious tasks—so you can focus on what really matters.
             </p>
             <div className="flex items-center justify-center gap-x-6">
-              <a href="https://app.fileorganizer2000.com">
+              <a href="https://app.notecompanion.ai">
                 <Button size="lg" className="text-white bg-primary hover:bg-primary/90">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
