@@ -213,7 +213,8 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
           >
             consider supporting us
           </a>
-          {" "}to help improve and maintain the project. Thank you!
+          {" "}
+          to help improve and maintain the project. Thank you!
         </p>
         <p className="text-[--text-muted]">
           <a
