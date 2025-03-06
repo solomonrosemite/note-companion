@@ -98,7 +98,7 @@ export default function RootLayout({
                           <Star className="h-4 w-4" />
                           <span>530</span>
                         </a>
-                        <Link href="https://app.fileorganizer2000.com">
+                        <Link href="https://app.notecompanion.ai">
                           <Button
                             variant="default"
                             size="sm"
