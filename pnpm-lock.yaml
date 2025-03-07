@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  xcode@3.0.1:
+    hash: 95feb68aeb57d5445d1947580b671a26fc5c7a27a272b2bf5cd21024e8955c32
+    path: patches/xcode@3.0.1.patch
+
 importers:
 
   .:
@@ -16,7 +21,7 @@ importers:
         version: 2.4.4
       typescript:
         specifier: ^5.2.2
-        version: 5.8.2
+        version: 5.3.3
 
   packages/audio-server:
     dependencies:
@@ -9714,8 +9719,8 @@ packages:
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0
 
-  swr@2.3.2:
-    resolution: {integrity: sha512-RosxFpiabojs75IwQ316DGoDRmOqtiAj0tg8wCcbEu4CiLZBs/a9QNtHV7TUfDXmmlgqij/NqzKq/eLelyv9xA==}
+  swr@2.3.3:
+    resolution: {integrity: sha512-dshNvs3ExOqtZ6kJBaAsabhPdHyeY4P2cKwRCniDVifBMoG/SVI7tfLWqPXriVspf2Rg4tPzXJTnwaihIeFw2A==}
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -10061,11 +10066,6 @@ packages:
 
   typescript@5.3.3:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
-  typescript@5.8.2:
-    resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -10715,7 +10715,7 @@ snapshots:
     dependencies:
       '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
       '@ai-sdk/ui-utils': 1.1.17(zod@3.24.2)
-      swr: 2.3.2(react@18.3.1)
+      swr: 2.3.3(react@18.3.1)
       throttleit: 2.1.0
     optionalDependencies:
       react: 18.3.1
@@ -10725,7 +10725,7 @@ snapshots:
     dependencies:
       '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
       '@ai-sdk/ui-utils': 1.1.17(zod@3.24.2)
-      swr: 2.3.2(react@19.0.0)
+      swr: 2.3.3(react@19.0.0)
       throttleit: 2.1.0
     optionalDependencies:
       react: 19.0.0
@@ -12134,7 +12134,7 @@ snapshots:
       glob-to-regexp: 0.4.1
       js-cookie: 3.0.5
       std-env: 3.8.1
-      swr: 2.3.2(react@19.0.0)
+      swr: 2.3.3(react@19.0.0)
     optionalDependencies:
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
@@ -12685,7 +12685,7 @@ snapshots:
       semver: 7.7.1
       slash: 3.0.0
       slugify: 1.6.6
-      xcode: 3.0.1
+      xcode: 3.0.1(patch_hash=95feb68aeb57d5445d1947580b671a26fc5c7a27a272b2bf5cd21024e8955c32)
       xml2js: 0.6.0
     transitivePeerDependencies:
       - supports-color
@@ -22298,13 +22298,13 @@ snapshots:
       react: 18.3.1
       use-sync-external-store: 1.4.0(react@18.3.1)
 
-  swr@2.3.2(react@18.3.1):
+  swr@2.3.3(react@18.3.1):
     dependencies:
       dequal: 2.0.3
       react: 18.3.1
       use-sync-external-store: 1.4.0(react@18.3.1)
 
-  swr@2.3.2(react@19.0.0):
+  swr@2.3.3(react@19.0.0):
     dependencies:
       dequal: 2.0.3
       react: 19.0.0
@@ -22740,8 +22740,6 @@ snapshots:
   typescript@5.2.2: {}
 
   typescript@5.3.3: {}
-
-  typescript@5.8.2: {}
 
   ua-parser-js@1.0.40: {}
 
@@ -23209,7 +23207,7 @@ snapshots:
       bufferutil: 4.0.8
       utf-8-validate: 6.0.3
 
-  xcode@3.0.1:
+  xcode@3.0.1(patch_hash=95feb68aeb57d5445d1947580b671a26fc5c7a27a272b2bf5cd21024e8955c32):
     dependencies:
       simple-plist: 1.3.1
       uuid: 7.0.3

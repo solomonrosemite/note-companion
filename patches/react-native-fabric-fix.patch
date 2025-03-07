@@ -13,4 +13,4 @@ namespace react {
 void ThirdPartyFabricComponentsProvider::registerThirdPartyComponentsIfNeeded() {}
 
 } // namespace react
-} // namespace facebook 
+} // namespace facebook
