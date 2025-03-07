@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
-import * as crypto from 'crypto';
 
 // This is a server-side implementation of password verification
-// In a production environment, you would use Clerk's client-side authentication
-// which provides built-in password verification through the useSignIn hook
+// It uses Clerk's API to verify passwords and create sessions
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,37 +34,49 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
     
-    // IMPORTANT: In a real implementation with Clerk, password verification should be done client-side
-    // using the useSignIn hook and signIn.create() method as shown in the example:
-    //
-    // const signInAttempt = await signIn.create({
-    //   identifier: email,
-    //   password,
-    // });
-    //
-    // if (signInAttempt.status === 'complete') {
-    //   await setActive({ session: signInAttempt.createdSessionId });
-    //   // Redirect or return success
-    // }
-    
-    // Since we can't verify passwords directly on the server side with Clerk,
-    // we'll implement a simplified version that creates a secure token
-    // This approach should only be used for development or testing purposes
-    
-    // Create a secure token using HMAC with a secret key
-    const hmac = crypto.createHmac('sha256', process.env.CLERK_SECRET_KEY || 'clerk-secret');
-    hmac.update(`${user.id}:${Date.now()}`);
-    const token = hmac.digest('base64');
-    const expiresAt = Date.now() + 3600000; // 1 hour expiration
-    
-    // Log the sign-in attempt (remove in production)
-    console.log(`User ${user.id} (${email}) authentication attempt processed`);
-    
-    return NextResponse.json({
-      token,
-      userId: user.id,
-      expiresAt,
-    });
+    try {
+      // Use Clerk's API to verify the password and create a sign-in
+      // This is similar to the client-side signIn.create() method
+      const response = await fetch(`https://api.clerk.com/v1/client/sign_ins`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: email,
+          password: password,
+        }),
+      });
+      
+      if (!response.ok) {
+        // If the response is not ok, it's likely due to invalid credentials
+        console.error("Error verifying credentials:", await response.text());
+        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      }
+      
+      const data = await response.json();
+      
+      // Check if the sign-in was successful
+      if (data.status === "complete") {
+        // If the sign-in was successful, return the token and user ID
+        return NextResponse.json({
+          token: data.created_session_id,
+          userId: data.user_id,
+          expiresAt: Date.now() + 3600000, // 1 hour expiration
+        });
+      } else {
+        // If the sign-in attempt requires additional verification steps
+        return NextResponse.json({ 
+          error: "Additional verification required",
+          message: "Please complete the additional verification steps to sign in."
+        }, { status: 401 });
+      }
+    } catch (error) {
+      // If there's an error verifying the password, it's likely due to invalid credentials
+      console.error("Error verifying credentials:", error);
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
   } catch (error) {
     console.error("Error in sign-in:", error);
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
