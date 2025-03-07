@@ -42,13 +42,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
     
-    // Create a session for the user after successful verification
-    const session = await client.sessions.createSession(user.id, {
-      // You can specify additional session options here if needed
-    });
+    // Instead of creating a session, just use the userId as a token base
+    // In production, you might want to use a proper JWT library
+    const tokenValue = `auth_${user.id}_${Date.now()}`;
     
     return NextResponse.json({
-      token: session.id,
+      token: tokenValue,
       userId: user.id,
       expiresAt: Date.now() + 3600000, // 1 hour expiration
     });
