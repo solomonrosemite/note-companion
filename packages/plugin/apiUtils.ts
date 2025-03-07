@@ -20,8 +20,10 @@ export async function makeApiRequest<T>(
 export async function checkLicenseKey(
   serverUrl: string,
   key: string
-): Promise<boolean> {
+): Promise<{ isValid: boolean; errorMessage?: string }> {
   try {
+    console.log(`Checking license key at ${serverUrl}/api/check-key`);
+    
     const response: RequestUrlResponse = await requestUrl({
       url: `${serverUrl}/api/check-key`,
       method: "POST",
@@ -30,11 +32,37 @@ export async function checkLicenseKey(
         Authorization: `Bearer ${key}`,
       },
     });
-    console.log("response", response.json);
-    return response.status === 200;
+    
+    console.log("License check response status:", response.status);
+    console.log("License check response data:", response.json);
+    
+    if (response.status === 200) {
+      // Check if the response contains a valid message
+      const validMessages = ["Valid key", "Valid session", "Development mode"];
+      if (response.json && response.json.message && validMessages.includes(response.json.message)) {
+        console.log(`License key valid with message: ${response.json.message}`);
+        return { isValid: true };
+      } else {
+        console.error("License key response not recognized:", response.json);
+        return { 
+          isValid: false, 
+          errorMessage: response.json?.error || "Invalid license key response" 
+        };
+      }
+    } else {
+      console.error("License key check failed with status:", response.status);
+      return { 
+        isValid: false, 
+        errorMessage: response.json?.error || "Invalid license key" 
+      };
+    }
   } catch (error) {
+    console.error("Error checking API key:", error);
     logger.error("Error checking API key:", error);
-    return false;
+    return { 
+      isValid: false, 
+      errorMessage: error instanceof Error ? error.message : "Failed to validate license key" 
+    };
   }
 }
 

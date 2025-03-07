@@ -4,6 +4,7 @@ export class FileOrganizerSettings {
   CLERK_EMAIL = ""; // Store Clerk email
   CLERK_PASSWORD = ""; // Store Clerk password
   isLicenseValid = false;
+  licenseErrorMessage = ""; // Store license validation error message
   useLogs = true;
   defaultDestinationPath = "_FileOrganizer2000/Processed";
   referencePath = "_FileOrganizer2000/References";

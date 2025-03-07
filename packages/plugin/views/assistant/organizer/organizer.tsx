@@ -38,6 +38,11 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const [isLicenseValid, setIsLicenseValid] = React.useState(false);
   const [isConnected, setIsConnected] = React.useState(true);
 
+  // Initialize license validation state from plugin settings
+  React.useEffect(() => {
+    setIsLicenseValid(plugin.settings.isLicenseValid);
+  }, [plugin.settings.isLicenseValid]);
+
   const isMediaFile = React.useMemo(
     () => checkIfIsMediaFile(activeFile),
     [activeFile]

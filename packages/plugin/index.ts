@@ -132,15 +132,27 @@ export default class FileOrganizer extends Plugin {
 
   async isLicenseKeyValid(key: string): Promise<boolean> {
     try {
-      const isValid = await checkLicenseKey(this.getServerUrl(), key);
+      console.log("Validating license key...");
+      const result = await checkLicenseKey(this.getServerUrl(), key);
 
-      this.settings.isLicenseValid = isValid;
+      this.settings.isLicenseValid = result.isValid;
       this.settings.API_KEY = key;
+      
+      if (!result.isValid) {
+        console.error(`License validation failed: ${result.errorMessage}`);
+        this.settings.licenseErrorMessage = result.errorMessage || "Unknown error";
+      } else {
+        console.log("License validation successful");
+        this.settings.licenseErrorMessage = "";
+      }
+      
       await this.saveSettings();
-      return isValid;
+      return result.isValid;
     } catch (error) {
+      console.error("Error in isLicenseKeyValid:", error);
       logger.error("Error checking API key:", error);
       this.settings.isLicenseValid = false;
+      this.settings.licenseErrorMessage = error instanceof Error ? error.message : "Unknown error";
       await this.saveSettings();
       return false;
     }
@@ -454,16 +466,24 @@ export default class FileOrganizer extends Plugin {
   
   async signInWithClerk(email: string, password: string): Promise<boolean> {
     try {
+      console.log(`Attempting to sign in with Clerk using email: ${email.substring(0, 3)}...`);
       const auth = await signInWithClerk(this.getServerUrl(), email, password);
       if (auth) {
+        console.log("Clerk authentication successful");
         this.settings.CLERK_SESSION_TOKEN = auth.token;
         await this.saveSettings();
         return true;
       }
+      console.error("Clerk authentication failed - no auth token returned");
       return false;
     } catch (error) {
-      logger.error("Error signing in with Clerk:", error);
-      return false;
+      console.error("Error signing in with Clerk:", error);
+      // Clear any existing session token on error
+      this.settings.CLERK_SESSION_TOKEN = "";
+      await this.saveSettings();
+      
+      // Re-throw the error so it can be handled by the UI
+      throw error;
     }
   }
 

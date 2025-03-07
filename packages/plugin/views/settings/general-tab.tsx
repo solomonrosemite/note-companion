@@ -29,6 +29,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const [authStatus, setAuthStatus] = useState<'authenticated' | 'unauthenticated' | 'loading'>(
     plugin.settings.CLERK_SESSION_TOKEN ? 'authenticated' : 'unauthenticated'
   );
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Check key status on mount if we have a key
   useEffect(() => {
@@ -40,8 +41,11 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const checkLicenseStatus = async () => {
     if (!licenseKey) return;
     setKeyStatus('checking');
+    console.log("Checking license status for key:", licenseKey ? "********" : "empty");
     const isValid = await plugin.isLicenseKeyValid(licenseKey);
     setKeyStatus(isValid ? 'valid' : 'invalid');
+    console.log("License status check result:", isValid ? "valid" : "invalid", 
+      isValid ? "" : `(Error: ${plugin.settings.licenseErrorMessage})`);
   };
 
   const handleLicenseKeyChange = async (value: string) => {
@@ -49,10 +53,24 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
     setKeyStatus('idle');
     plugin.settings.API_KEY = value;
     await plugin.saveSettings();
+    console.log("License key updated, status set to idle");
   };
 
   const handleActivate = async () => {
-    await checkLicenseStatus();
+    setKeyStatus('checking');
+    console.log("Activating license key...");
+    const isValid = await plugin.isLicenseKeyValid(licenseKey);
+    setKeyStatus(isValid ? 'valid' : 'invalid');
+    
+    // Show a notice to the user
+    if (isValid) {
+      console.log("License key activated successfully");
+      new Notice("License key activated successfully", 3000);
+    } else {
+      const errorMessage = plugin.settings.licenseErrorMessage || "Please check and try again.";
+      console.error(`License key activation failed: ${errorMessage}`);
+      new Notice(`Invalid license key: ${errorMessage}`, 3000);
+    }
   };
 
   const getStatusIndicator = () => {
@@ -130,11 +148,29 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
                 <button 
                   onClick={async () => {
                     setAuthStatus('loading');
+                    setAuthError(null);
                     plugin.settings.CLERK_EMAIL = clerkEmail;
                     plugin.settings.CLERK_PASSWORD = clerkPassword;
                     await plugin.saveSettings();
-                    const auth = await plugin.signInWithClerk(clerkEmail, clerkPassword);
-                    setAuthStatus(auth ? 'authenticated' : 'unauthenticated');
+                    
+                    console.log("Attempting to sign in with Clerk...");
+                    try {
+                      const auth = await plugin.signInWithClerk(clerkEmail, clerkPassword);
+                      console.log("Clerk authentication result:", auth ? "success" : "failed");
+                      setAuthStatus(auth ? 'authenticated' : 'unauthenticated');
+                      
+                      if (!auth) {
+                        const errorMsg = "Authentication failed. Please check your credentials.";
+                        setAuthError(errorMsg);
+                        new Notice(errorMsg, 3000);
+                      }
+                    } catch (error) {
+                      console.error("Error during Clerk authentication:", error);
+                      setAuthStatus('unauthenticated');
+                      const errorMsg = error instanceof Error ? error.message : "Unknown authentication error";
+                      setAuthError(errorMsg);
+                      new Notice(`Authentication error: ${errorMsg}`, 3000);
+                    }
                   }}
                   className="w-full bg-[--interactive-accent] text-[--text-on-accent] px-4 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
                   disabled={authStatus === 'loading'}
@@ -147,6 +183,14 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     Signed in successfully
+                  </div>
+                )}
+                {authStatus === 'unauthenticated' && authError && (
+                  <div className="flex items-center text-[--text-error] text-sm">
+                    <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    {authError}
                   </div>
                 )}
               </div>
