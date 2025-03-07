@@ -467,15 +467,39 @@ export default class FileOrganizer extends Plugin {
   async signInWithClerk(email: string, password: string): Promise<boolean> {
     try {
       console.log(`Attempting to sign in with Clerk using email: ${email.substring(0, 3)}...`);
-      const auth = await signInWithClerk(this.getServerUrl(), email, password);
-      if (auth) {
-        console.log("Clerk authentication successful");
-        this.settings.CLERK_SESSION_TOKEN = auth.token;
-        await this.saveSettings();
-        return true;
+      
+      // Validate inputs
+      if (!email || !password) {
+        console.error("Missing email or password");
+        throw new Error("Email and password are required");
       }
-      console.error("Clerk authentication failed - no auth token returned");
-      return false;
+      
+      const auth = await signInWithClerk(this.getServerUrl(), email, password);
+      
+      // Validate the auth response
+      if (!auth) {
+        console.error("Clerk authentication failed - no auth response");
+        return false;
+      }
+      
+      // Check for development mode token
+      const isDevelopmentToken = auth.token === "dev-token" && auth.userId === "dev-user";
+      
+      // In production, we should reject dev tokens unless we're actually in development mode
+      if (isDevelopmentToken) {
+        console.warn("Development mode token detected");
+        
+        // Only accept dev tokens if we're in a development environment or self-hosting is enabled
+        if (!this.settings.enableSelfHosting) {
+          console.error("Development token rejected in production mode");
+          throw new Error("Invalid authentication credentials");
+        }
+      }
+      
+      console.log("Clerk authentication successful");
+      this.settings.CLERK_SESSION_TOKEN = auth.token;
+      await this.saveSettings();
+      return true;
     } catch (error) {
       console.error("Error signing in with Clerk:", error);
       // Clear any existing session token on error

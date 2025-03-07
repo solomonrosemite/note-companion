@@ -25,10 +25,31 @@ export async function signInWithClerk(
     });
     
     console.log("Clerk sign-in response status:", response.status);
+    console.log("Clerk sign-in response data:", response.json);
     
-    if (response.status === 200) {
-      console.log("Clerk authentication successful");
+    // Check if the response contains a valid token and userId
+    if (response.status === 200 && response.json && response.json.token && response.json.userId) {
+      console.log("Clerk authentication successful - valid token received");
       return response.json;
+    }
+    
+    // If we got a 200 status but no valid token, it might be the development mode fallback
+    if (response.status === 200 && (!response.json.token || !response.json.userId)) {
+      console.warn("Received 200 status but invalid or missing token/userId - possible dev mode response");
+      
+      // Check if this is explicitly a development mode response
+      if (response.json.message === "Development mode") {
+        console.log("Development mode detected, creating synthetic token");
+        // Create a synthetic token for development mode
+        return {
+          token: "dev-token",
+          userId: response.json.userId || "dev-user",
+          expiresAt: Date.now() + 3600000 // 1 hour from now
+        };
+      } else {
+        console.error("Authentication response missing required fields:", response.json);
+        throw new Error("Invalid authentication response");
+      }
     }
     
     // Handle error responses with proper error messages

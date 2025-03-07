@@ -147,6 +147,19 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
                 />
                 <button 
                   onClick={async () => {
+                    // Validate inputs first
+                    if (!clerkEmail || !clerkEmail.includes('@')) {
+                      setAuthError("Please enter a valid email address");
+                      new Notice("Please enter a valid email address", 3000);
+                      return;
+                    }
+                    
+                    if (!clerkPassword || clerkPassword.length < 6) {
+                      setAuthError("Password must be at least 6 characters");
+                      new Notice("Password must be at least 6 characters", 3000);
+                      return;
+                    }
+                    
                     setAuthStatus('loading');
                     setAuthError(null);
                     plugin.settings.CLERK_EMAIL = clerkEmail;
@@ -155,11 +168,22 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
                     
                     console.log("Attempting to sign in with Clerk...");
                     try {
+                      // Check if we're using a test server
+                      const isTestServer = plugin.getServerUrl().includes('vercel.app') || 
+                                          plugin.getServerUrl().includes('localhost');
+                      
+                      if (isTestServer) {
+                        console.warn("Using test server - authentication may be automatically approved");
+                      }
+                      
                       const auth = await plugin.signInWithClerk(clerkEmail, clerkPassword);
                       console.log("Clerk authentication result:", auth ? "success" : "failed");
-                      setAuthStatus(auth ? 'authenticated' : 'unauthenticated');
                       
-                      if (!auth) {
+                      if (auth) {
+                        setAuthStatus('authenticated');
+                        new Notice("Signed in successfully", 3000);
+                      } else {
+                        setAuthStatus('unauthenticated');
                         const errorMsg = "Authentication failed. Please check your credentials.";
                         setAuthError(errorMsg);
                         new Notice(errorMsg, 3000);

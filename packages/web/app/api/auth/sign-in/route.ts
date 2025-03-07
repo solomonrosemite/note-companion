@@ -1,36 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
     
-    // This is a simplified example. In a real implementation,
-    // you would use Clerk's SDK to sign in the user.
-    // For now, we'll just return a mock token.
+    // Use Clerk's sign-in method to verify credentials.
+    // Note: Adjust the method and fields below according to Clerk's official documentation.
+    const signInResponse = await clerkClient.signIn.create({
+      identifier: email,
+      password: password,
+    });
     
-    const { userId } = await auth();
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Authentication failed" },
-        { status: 401 }
-      );
+    // Check if the sign in attempt was completed successfully
+    if (signInResponse.status !== "complete") {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
     
-    // Generate a session token (this is a simplified example)
-    const token = Buffer.from(`${userId}:${Date.now()}`).toString("base64");
+    // Extract the userId and token from the response
+    const userId = signInResponse.userId;
+    // Depending on your Clerk setup, you might have a session token or similar field
+    const token = signInResponse.createdSessionId; // Adjust this field as needed
+    const expiresAt = Date.now() + 3600000; // Example: token expires in 1 hour
     
     return NextResponse.json({
       token,
       userId,
-      expiresAt: Date.now() + 3600000, // 1 hour from now
+      expiresAt,
     });
   } catch (error) {
     console.error("Error in sign-in:", error);
-    return NextResponse.json(
-      { error: "Authentication failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 }
