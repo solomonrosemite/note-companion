@@ -98,7 +98,7 @@ export class RecordManager {
     this.app = app;
     this.idService = IdService.getInstance();
     this.settings = {
-      recordFilePath: normalizePath("_FileOrganizer2000/.records"),
+      recordFilePath: normalizePath("_NoteCompanion/.records"),
     };
     this.loadRecords();
   }

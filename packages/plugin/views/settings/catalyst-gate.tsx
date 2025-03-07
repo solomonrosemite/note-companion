@@ -63,7 +63,7 @@ export const CatalystGate: React.FC<CatalystGateProps> = ({
           </ul>
           <div className="flex flex-col gap-3">
             <a
-              href="https://fileorganizer2000.com"
+              href="https://notecompanion.ai"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-4 py-2 bg-[--interactive-accent] text-[--text-on-accent] rounded-lg hover:bg-[--interactive-accent-hover] transition-colors"

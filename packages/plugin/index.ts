@@ -679,7 +679,7 @@ export default class FileOrganizer extends Plugin {
       this.settings.fabricPaths,
       this.settings.pathToWatch,
       this.settings.errorFilePath,
-      "_FileOrganizer2000",
+      "_NoteCompanion",
       "/",
     ];
     logMessage("ignoredFolders", ignoredFolders);

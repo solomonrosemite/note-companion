@@ -143,7 +143,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
           Note Companion is an open-source initiative developed by two
           brothers. If you find it valuable, please{" "}
           <a
-            href="https://fileorganizer2000.com/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
+            href="https://notecompanion.ai/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[--text-accent] hover:text-[--text-accent-hover]"

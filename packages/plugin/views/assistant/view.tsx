@@ -236,7 +236,7 @@ export class AssistantViewWrapper extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Fo2k Assistant";
+    return "Note Companion";
   }
 
   getIcon(): string {
