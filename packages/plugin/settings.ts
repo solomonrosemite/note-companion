@@ -1,6 +1,8 @@
 export class FileOrganizerSettings {
   API_KEY = "";
   CLERK_SESSION_TOKEN = ""; // Store Clerk session token
+  CLERK_EMAIL = ""; // Store Clerk email
+  CLERK_PASSWORD = ""; // Store Clerk password
   isLicenseValid = false;
   useLogs = true;
   defaultDestinationPath = "_FileOrganizer2000/Processed";
@@ -13,7 +15,6 @@ export class FileOrganizerSettings {
   fabricPaths = "_FileOrganizer2000/Fabric";
   bypassedFilePath = "_FileOrganizer2000/Bypassed";
   errorFilePath = "_FileOrganizer2000/Errors";
-
   // inbox settings
   useSimilarTags = true;
   enableDocumentClassification = false;
