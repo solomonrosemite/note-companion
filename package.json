@@ -1,11 +1,10 @@
 {
   "name": "file-organizer-2000-monorepo",
   "private": true,
-
   "devDependencies": {
     "@types/node": "^22.13.9",
     "node-gyp": "^11.1.0",
-    "turbo": "latest",
+    "turbo": "^2.4.4",
     "typescript": "^5.2.2"
   },
   "version": "1.0.0",
