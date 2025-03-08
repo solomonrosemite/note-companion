@@ -9,6 +9,8 @@ services:
   envVars:
   - key: NODE_ENV
     value: production
+  - key: SKIP_MOBILE_PATCHES
+    value: "true"
   - key: OPENAI_API_KEY
     sync: false
   - key: SOLO_API_KEY
