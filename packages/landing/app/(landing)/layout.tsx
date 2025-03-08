@@ -48,21 +48,7 @@ export default function RootLayout({
       <body className="bg-background">
         <TooltipProvider>
           <Providers>
-            {/* DAO Announcement Banner */}
-            <div className="w-full bg-primary-100 border-b border-primary-200">
-              <div className="max-w-7xl mx-auto px-6 py-3 text-center">
-                <p className="text-sm text-primary-800">
-                  <span className="font-semibold">Exciting news!</span> We've
-                  become a community-owned organization.
-                  <a
-                    href="/dao"
-                    className="ml-2 font-medium underline hover:text-primary-600"
-                  >
-                    Learn why and how to get involved →
-                  </a>
-                </p>
-              </div>
-            </div>
+
             <main className="min-h-screen flex flex-col items-center">
               <div className="flex-1 w-full flex flex-col items-center">
                 <div className="w-full border-b border-gray-700 bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -128,16 +114,7 @@ export default function RootLayout({
                       >
                         Join our Telegram
                       </a>
-                      ,{" "}
-                      <a
-                        href="https://www.daos.fun/dao/8iLdHtnZL3aLVRVseT1Rv3cytngqPPoe2hWcouJLd8Gd"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        view on daos.fun
-                      </a>
-                      , or{" "}
+                      {" "}or{" "}
                       <a
                         href="https://x.com/notecompanion"
                         target="_blank"
