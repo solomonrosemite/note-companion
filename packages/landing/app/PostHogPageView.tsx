@@ -11,9 +11,9 @@ function PostHogPageView() {
 
   // Track pageviews
   useEffect(() => {
-    if (pathname && posthog) {
+    if (pathname && posthog && typeof window !== 'undefined') {
       let url = window.origin + pathname
-      if (searchParams.toString()) {
+      if (searchParams && searchParams.toString()) {
         url = url + `?${searchParams.toString()}`
       }
 
@@ -35,4 +35,4 @@ export default function SuspendedPostHogPageView() {
       <PostHogPageView />
     </Suspense>
   )
-} 
+}
