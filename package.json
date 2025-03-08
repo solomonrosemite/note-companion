@@ -22,6 +22,6 @@
     "test": "turbo run test",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "postinstall": "node -e \"process.env.SKIP_MOBILE_PATCHES || require('./scripts/create-fabric-provider.js')\""
+    "postinstall": "node scripts/create-fabric-provider.js"
   }
 }
