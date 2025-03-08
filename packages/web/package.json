@@ -20,6 +20,7 @@
     "@ai-sdk/amazon-bedrock": "^1.0.6",
     "@ai-sdk/anthropic": "^1.1.10",
     "@ai-sdk/deepseek": "^0.1.0",
+    "@ai-sdk/google": "^1.1.20",
     "@ai-sdk/groq": "^1.1.0",
     "@ai-sdk/openai": "^1.0.6",
     "@browserbasehq/stagehand": "^1.5.0",
@@ -82,7 +83,6 @@
     "youtube-transcript": "^1.2.1",
     "zod": "^3.23.8"
   },
-  "packageManager": "pnpm@8.15.4",
   "devDependencies": {
     "@jest/types": "^29.6.3",
     "@types/jest": "^29.5.14",
@@ -98,5 +98,4 @@
     "tsx": "^4.19.2",
     "uuid": "^11.0.3"
   }
-
 }
