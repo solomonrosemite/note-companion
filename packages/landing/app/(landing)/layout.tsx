@@ -114,16 +114,7 @@ export default function RootLayout({
                       >
                         Join our Telegram
                       </a>
-                      ,{" "}
-                      <a
-                        href="https://www.daos.fun/dao/8iLdHtnZL3aLVRVseT1Rv3cytngqPPoe2hWcouJLd8Gd"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        view on daos.fun
-                      </a>
-                      , or{" "}
+                      {" "}or{" "}
                       <a
                         href="https://x.com/notecompanion"
                         target="_blank"
