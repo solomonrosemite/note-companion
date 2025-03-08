@@ -507,8 +507,6 @@ export default class FileOrganizer extends Plugin {
       
       console.log("Clerk authentication successful");
       this.settings.CLERK_SESSION_TOKEN = auth.token;
-      // Also set API_KEY to ensure backward compatibility
-      this.settings.API_KEY = auth.token;
       await this.saveSettings();
       return true;
     } catch (error) {
