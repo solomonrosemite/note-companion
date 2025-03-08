@@ -17,6 +17,13 @@
     "release:ios": "eas build --platform ios",
     "build:ios": "eas build --platform ios --local --non-interactive "
   },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false
+      }
+    }
+  },
   "jest": {
     "preset": "jest-expo"
   },

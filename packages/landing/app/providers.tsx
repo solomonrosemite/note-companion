@@ -4,8 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { useState, useEffect } from 'react'
 import posthog from 'posthog-js'
-import { PostHogProvider as PHProvider } from 'posthog-js/react'
-import PostHogPageView from "./PostHogPageView"
+import { PostHogProvider } from 'posthog-js/react'
+import dynamic from 'next/dynamic'
+
+// Dynamically import the PostHogPageView component to avoid SSR issues
+const PostHogPageView = dynamic(() => import('./PostHogPageView'), {
+  ssr: false,
+})
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -19,12 +24,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }))
 
   useEffect(() => {
-    posthog.init('phc_f004Gv83AkfXh2WJ9XQ7zqaujgajgiS3YXEYa52Evfp', {
-      api_host: "/ingest",
-      ui_host: 'https://us.posthog.com',
-      capture_pageview: false, // Disable automatic pageview capture, as we capture manually
-      capture_pageleave: true, // Enable pageleave capture
-    })
+    // Only initialize PostHog in the browser, not during SSR
+    if (typeof window !== 'undefined') {
+      posthog.init('phc_f004Gv83AkfXh2WJ9XQ7zqaujgajgiS3YXEYa52Evfp', {
+        api_host: "/ingest",
+        ui_host: 'https://us.posthog.com',
+        capture_pageview: false, // Disable automatic pageview capture, as we capture manually
+        capture_pageleave: true, // Enable pageleave capture
+      })
+    }
   }, [])
 
   return (
@@ -35,10 +43,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        <PHProvider client={posthog}>
+        <PostHogProvider client={posthog}>
           <PostHogPageView />
           {children}
-        </PHProvider>
+        </PostHogProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )
