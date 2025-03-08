@@ -4,9 +4,10 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check authentication first
     const { userId } = await auth();
     if (!userId) {
@@ -17,7 +18,7 @@ export async function DELETE(
       );
     }
     
-    const fileId = parseInt(params.id, 10);
+    const fileId = parseInt(id, 10);
     if (isNaN(fileId)) {
       return NextResponse.json(
         { error: "Invalid file ID" },
