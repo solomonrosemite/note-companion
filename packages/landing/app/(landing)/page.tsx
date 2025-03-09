@@ -279,7 +279,7 @@ export default function Page() {
 
 
       {/* Demo Section */}
-      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm">
+      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm hidden md:block">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             See it in Action
