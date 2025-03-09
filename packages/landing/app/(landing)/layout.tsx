@@ -84,7 +84,7 @@ export default function LandingLayout({
                       <Button
                         variant="default"
                         size="sm"
-                        className="bg-primary text-white hover:bg-primary/90"
+                        className="bg-[#6366F1] text-white hover:bg-[#4F46E5]"
                       >
                         Start
                       </Button>
