@@ -43,40 +43,28 @@ export default function Page() {
       <div className="w-full max-w-5xl px-6 py-12 sm:py-12 lg:px-8 text-center bg-transparent">
         <div className="mx-auto max-w-2xl">
           <div className="mb-8">
-            <Image
+            {/* <Image
               src="https://framerusercontent.com/images/SqHU6Ili7ACWk8dhvEPmdfXEPDA.png"
               alt="File Organizer Logo"
               width={64}
               height={64}
               className="mx-auto"
-            />
+            /> */}
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            <span>Keep your Vault</span>
-            <span className="text-primary block">Organized</span>
+            <span>Obsidian's </span>
+            <span className="text-primary">Smartest</span>
+            <span> Companion</span>
           </h1>
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
-            <span className="text-xl text-muted-foreground/80 relative">
-              without the hassle
-              <svg className="absolute -bottom-[4px] left-0 w-full" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
-                <path 
-                  d="M0,7 Q100,-1 200,7" 
-                  stroke="blue" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                  fill="none"
-                  className="opacity-50"
-                />
-              </svg>
-            </span>
+            
+   
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
           </div>
           <p className="mt-6 text-lg leading-8">
           
-           Note Companion is an AI-powered Obsidian plugin that improves your workflow by automatically organizing and formatting your notes—so you don't have to.
-
-
+          Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.
            {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
@@ -279,7 +267,7 @@ export default function Page() {
 
 
       {/* Demo Section */}
-      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm hidden md:block">
+      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             See it in Action
