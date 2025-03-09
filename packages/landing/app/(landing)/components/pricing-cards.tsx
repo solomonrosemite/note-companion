@@ -103,7 +103,7 @@ export function PricingCards() {
             </div>
             <h3 className="text-2xl font-semibold mb-4">Subscription</h3>
             
-            {/* Switch above price section */}
+            {/* Switch above price section with improved styling */}
             <div className="flex items-center justify-center gap-3 mb-2">
               <span className={`text-sm ${!isYearly ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                 Monthly
@@ -111,7 +111,7 @@ export function PricingCards() {
               <Switch
                 checked={isYearly}
                 onCheckedChange={setIsYearly}
-                className="data-[state=checked]:bg-primary"
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-gray-200 data-[state=unchecked]:border-gray-300"
               />
               <span className={`text-sm ${isYearly ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                 Yearly
