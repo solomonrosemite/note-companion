@@ -51,25 +51,28 @@ export default function Page() {
               className="mx-auto"
             /> */}
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-12">
             <span>Obsidian's </span>
-            <span className="text-primary">Smartest</span>
+            <span className="relative inline-block text-gray-700">
+              Smartest
+              <span className="absolute -bottom-1 left-0 w-full h-[0.1em] bg-[#6366F1] transform -rotate-1"></span>
+
+            </span>
             <span> Companion</span>
           </h1>
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
-            
-   
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
           </div>
-          <p className="mt-6 text-lg leading-8">
           
-          Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.
-           {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
+          <p className="mt-6 text-lg leading-8">
+            Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.s
+            {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
           </p>
+
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <a href="https://app.notecompanion.ai">
-              <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
+              <Button size="lg" className="bg-[#6366F1] text-white hover:bg-[#4F46E5]">
                 Start free trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -114,8 +117,8 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Inbox Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-                <Inbox className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
+                <Inbox className="h-6 w-6 text-[#6366F1]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Automated Organization</h3>
               <p className="text-muted-foreground mb-4">
@@ -133,8 +136,8 @@ export default function Page() {
             </div>
             {/* Chat Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-                <MessageSquare className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
+                <MessageSquare className="h-6 w-6 text-[#6366F1]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Chat</h3>
               <p className="text-muted-foreground mb-4">
@@ -143,8 +146,8 @@ export default function Page() {
             </div>
             {/* Meetings Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-                <Video className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
+                <Video className="h-6 w-6 text-[#6366F1]" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Meetings</h3>
               <p className="text-muted-foreground mb-4">
@@ -322,8 +325,8 @@ export default function Page() {
             {/* <p className="text-lg text-muted-foreground mb-12">
               Whether you're a solo note-taker or a power user looking for advanced features, we've got you covered.
             </p> */}
-            <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
-              <p className="text-[#1570EF]">
+            <div className="bg-[#6366F1]/10 border-1 border-[#6366F1] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
+              <p className="text-[#6366F1]">
                 Educators and students qualify for a 50% discount on the Lifetime plan or a special Monthly rate of $9. To claim this offer, please reach out at alex@fileorganizer2000.com via your education email.
               </p>
             </div>
@@ -373,7 +376,7 @@ export default function Page() {
             </p>
             <div className="flex items-center justify-center gap-x-6">
               <a href="https://app.notecompanion.ai">
-                <Button size="lg" className="text-white bg-primary hover:bg-primary/90">
+                <Button size="lg" className="bg-[#6366F1] text-white hover:bg-[#4F46E5]">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

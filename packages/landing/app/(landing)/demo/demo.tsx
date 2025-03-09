@@ -399,7 +399,7 @@ export const Demo = () => {
           {/* Processing Status */}
           <div className="flex items-center justify-center space-x-4 bg-card border border-border rounded-lg p-3">
             <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 bg-primary rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-[#6366F1] rounded-full animate-pulse"></div>
               <span className="text-sm">Extracting key points</span>
             </div>
             <div className="text-sm text-muted-foreground">|</div>
@@ -496,7 +496,7 @@ export const Demo = () => {
     const info = explanations[tab];
 
     return (
-      <div className="bg-blue-500/10 border-b border-border">
+      <div className="bg-[#6366F1]/10 border-b border-border">
         <div className="max-w-2xl mx-auto p-4 space-y-3">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">Functionality Overview</p>
           <div className="flex items-start gap-4">
@@ -509,7 +509,7 @@ export const Demo = () => {
               <div className="flex flex-col gap-2 pt-2">
                 {info.benefits.map((benefit, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500/50" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#6366F1]/50" />
                     <span className="text-muted-foreground">{benefit}</span>
                   </div>
                 ))}
@@ -600,7 +600,7 @@ export const Demo = () => {
                   // Formatted Note
                   <>
                     <div>
-                      <span className="text-primary"># Team Sync - Product Review</span>
+                      <span className="text-[#6366F1]"># Team Sync - Product Review</span>
                     </div>
                     
                     <div>
@@ -651,19 +651,19 @@ export const Demo = () => {
                     <div>
                       <span className="text-muted-foreground">## Related Notes</span>
                       <div className="pl-4 mt-2 space-y-1">
-                        <span className="text-blue-500">[[Q4 Planning]]</span>
-                        <span className="text-blue-500">[[Mobile App Redesign]]</span>
-                        <span className="text-blue-500">[[User Feedback Q1 2024]]</span>
+                        <span className="text-[#6366F1]">[[Q4 Planning]]</span>
+                        <span className="text-[#6366F1]">[[Mobile App Redesign]]</span>
+                        <span className="text-[#6366F1]">[[User Feedback Q1 2024]]</span>
                       </div>
                     </div>
 
                     <div>
                       <span className="text-muted-foreground">## Tags</span>
                       <div className="pl-4 mt-2 space-x-2">
-                        <span className="text-blue-500">#product</span>
-                        <span className="text-blue-500">#mobile</span>
-                        <span className="text-blue-500">#q4-2024</span>
-                        <span className="text-blue-500">#user-feedback</span>
+                        <span className="text-[#6366F1]">#product</span>
+                        <span className="text-[#6366F1]">#mobile</span>
+                        <span className="text-[#6366F1]">#q4-2024</span>
+                        <span className="text-[#6366F1]">#user-feedback</span>
                       </div>
                     </div>
                   </>
@@ -683,7 +683,7 @@ export const Demo = () => {
                   variant={activeTab === tab.id ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`text-sm ${activeTab === tab.id ? "text-white" : ""}`}
+                  className={`text-sm ${activeTab === tab.id ? "bg-[#6366F1] text-white" : ""}`}
                 >
                   {tab.label}
                 </Button>
