@@ -286,11 +286,11 @@ export default function Page() {
       <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm hidden lg:block">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            See it in Action
+            What it looks like in your vault
           </h2>
-          <p className="text-lg">
+          {/* <p className="text-lg">
             Experience how Note Companion transforms your workflow
-          </p>
+          </p> */}
         </div>
         <Demo />
       </div>
