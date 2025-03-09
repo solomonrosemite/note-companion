@@ -78,7 +78,7 @@ export default function LandingLayout({
                       className="inline-flex items-center space-x-2 bg-[#1F2937] text-white px-3 py-1.5 rounded-full text-sm font-semibold"
                     >
                       <Star className="h-4 w-4" />
-                      <span>530</span>
+                      <span>562</span>
                     </a>
                     <Link href="https://app.notecompanion.ai">
                       <Button
