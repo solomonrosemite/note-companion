@@ -352,7 +352,7 @@ export default function Page() {
       <section className="w-full py-24 bg-white/5 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
-            Discover More Features
+             More Stuff You Can Do
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="relative aspect-video rounded-lg overflow-hidden">
