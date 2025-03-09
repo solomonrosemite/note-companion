@@ -382,7 +382,7 @@ export default function Page() {
         <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-              Tired of having a messy Obsidian vault?
+              Messy vault?
             </h2>
             <p className="text-lg text-muted-foreground mb-10">
               Get Note Companion and enjoy a 7-day free trial on the yearly plan. Bring order to your Obsidian vault. Stop wrestling with messy notes and let AI handle the tedious tasks—so you can focus on what really matters.
