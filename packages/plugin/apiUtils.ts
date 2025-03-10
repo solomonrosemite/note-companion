@@ -1,6 +1,7 @@
 import { Notice, RequestUrlResponse, requestUrl } from "obsidian";
 import { logMessage } from "./someUtils";
 import { logger } from "./services/logger";
+import { verifyJwtToken } from "./auth/jwt-verification";
 
 export async function makeApiRequest<T>(
   requestFn: () => Promise<RequestUrlResponse>
@@ -153,16 +154,46 @@ export async function handleAuthenticatedRequest<T>(
       // If we're using Clerk authentication and haven't exceeded retry attempts
       if (plugin.settings.CLERK_SESSION_TOKEN && retryCount < 1) {
         logger.info("Attempting to refresh Clerk token");
-        const refreshed = await plugin.refreshClerkToken();
         
-        if (refreshed) {
-          logger.info("Token refreshed successfully, retrying request");
-          // Retry the request with the new token
-          return await handleAuthenticatedRequest(requestFn, plugin, retryCount + 1);
+        // First try to verify the token locally
+        if (plugin.settings.CLERK_PUBLIC_KEY) {
+          const decoded = await verifyJwtToken(
+            plugin.settings.CLERK_SESSION_TOKEN,
+            plugin.settings.CLERK_PUBLIC_KEY
+          );
+          
+          // If token is invalid, try to refresh it
+          if (!decoded) {
+            logger.info("Token is invalid, attempting to refresh");
+            const refreshed = await plugin.refreshClerkToken();
+            
+            if (refreshed) {
+              logger.info("Token refreshed successfully, retrying request");
+              // Retry the request with the new token
+              return await handleAuthenticatedRequest(requestFn, plugin, retryCount + 1);
+            } else {
+              logger.error("Failed to refresh token, authentication may have expired");
+              // Show a notice to the user that they need to re-authenticate
+              new Notice("Your session has expired. Please sign in again.", 5000);
+            }
+          } else {
+            logger.info("Token is valid but request failed, retrying with same token");
+            // Token is valid but request failed for other reasons, retry once
+            return await handleAuthenticatedRequest(requestFn, plugin, retryCount + 1);
+          }
         } else {
-          logger.error("Failed to refresh token, authentication may have expired");
-          // Show a notice to the user that they need to re-authenticate
-          new Notice("Your session has expired. Please sign in again.", 5000);
+          // No public key set, fall back to server-side refresh
+          const refreshed = await plugin.refreshClerkToken();
+          
+          if (refreshed) {
+            logger.info("Token refreshed successfully, retrying request");
+            // Retry the request with the new token
+            return await handleAuthenticatedRequest(requestFn, plugin, retryCount + 1);
+          } else {
+            logger.error("Failed to refresh token, authentication may have expired");
+            // Show a notice to the user that they need to re-authenticate
+            new Notice("Your session has expired. Please sign in again.", 5000);
+          }
         }
       }
     }

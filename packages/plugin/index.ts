@@ -467,6 +467,9 @@ export default class FileOrganizer extends Plugin {
   getAuthToken(): string {
     // If we have a Clerk token, use it
     if (this.settings.CLERK_SESSION_TOKEN) {
+      // Note: We can't use async/await here since this is a synchronous method
+      // The actual token verification will happen in handleAuthenticatedRequest
+      // or in the refreshClerkToken/isClerkTokenValid methods
       return this.settings.CLERK_SESSION_TOKEN;
     }
     // Otherwise, fall back to the API key
@@ -524,7 +527,13 @@ export default class FileOrganizer extends Plugin {
     if (!this.settings.CLERK_SESSION_TOKEN) return false;
     
     try {
-      const auth = await refreshClerkToken(this.getServerUrl(), this.settings.CLERK_SESSION_TOKEN);
+      // Pass the public key for local JWT verification if available
+      const auth = await refreshClerkToken(
+        this.getServerUrl(), 
+        this.settings.CLERK_SESSION_TOKEN,
+        this.settings.CLERK_PUBLIC_KEY
+      );
+      
       if (auth) {
         this.settings.CLERK_SESSION_TOKEN = auth.token;
         await this.saveSettings();
@@ -540,7 +549,12 @@ export default class FileOrganizer extends Plugin {
   async isClerkTokenValid(): Promise<boolean> {
     if (!this.settings.CLERK_SESSION_TOKEN) return false;
     try {
-      return await isClerkTokenValid(this.getServerUrl(), this.settings.CLERK_SESSION_TOKEN);
+      // Pass the public key for local JWT verification if available
+      return await isClerkTokenValid(
+        this.getServerUrl(), 
+        this.settings.CLERK_SESSION_TOKEN,
+        this.settings.CLERK_PUBLIC_KEY
+      );
     } catch (error) {
       logger.error("Error validating Clerk token:", error);
       return false;
