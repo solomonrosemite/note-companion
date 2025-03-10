@@ -83,7 +83,8 @@ export function FaqSection() {
             answer={`Privacy is super important to us. Here's a quick rundown of how we handle your information:
 
 <strong>Your Files</strong>
-  We process your files through OpenAI's GPT-4o to help organize them efficiently when using the cloud-hosted version. We only use your files to provide this service and don't store or share them with anyone.
+  Your files are processed through OpenAI's GPT-4o when using the cloud-hosted version.
+  Unlike with a Chat GPT subscription, your prompts are not saved or stored anywhere other than your computer.
 
 <strong>Your Data</strong>
   We use Clerk for authentication, so your login details are safe and secure. Stripe handles all payments, ensuring your payment information is protected.
