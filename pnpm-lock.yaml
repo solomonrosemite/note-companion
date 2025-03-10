@@ -194,10 +194,10 @@ importers:
         specifier: 14.0.2
         version: 14.0.2
       '@react-navigation/bottom-tabs':
-        specifier: 7.2.0
+        specifier: ^7.2.0
         version: 7.2.0(@react-navigation/native@7.0.15(react-native@0.76.7(@babel/core@7.25.2)(@babel/preset-env@7.26.9(@babel/core@7.25.2))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native-safe-area-context@4.12.0(react-native@0.76.7(@babel/core@7.25.2)(@babel/preset-env@7.26.9(@babel/core@7.25.2))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native-screens@4.4.0(react-native@0.76.7(@babel/core@7.25.2)(@babel/preset-env@7.26.9(@babel/core@7.25.2))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native@0.76.7(@babel/core@7.25.2)(@babel/preset-env@7.26.9(@babel/core@7.25.2))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
       '@react-navigation/native':
-        specifier: 7.0.15
+        specifier: ^7.0.14
         version: 7.0.15(react-native@0.76.7(@babel/core@7.25.2)(@babel/preset-env@7.26.9(@babel/core@7.25.2))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
       expo:
         specifier: 52.0.37
