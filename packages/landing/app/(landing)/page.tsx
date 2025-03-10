@@ -64,7 +64,7 @@ export default function Page() {
               </div>
             </div>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-12">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-6">
             <span>Obsidian's </span>
             <span className="relative inline-block text-gray-700">
               Smartest
@@ -78,7 +78,7 @@ export default function Page() {
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
           </div>
           
-          <p className="mt-6 text-lg leading-8">
+          <p className="mt- text-lg leading-8">
             Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.
             {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
           </p>
