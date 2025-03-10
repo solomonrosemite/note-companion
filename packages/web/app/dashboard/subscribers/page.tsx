@@ -12,7 +12,7 @@ export default function SubscribersDashboard() {
     );
   }
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
       <main className="container mx-auto px-4 py-12">
         <h1 className="text-4xl font-bold mb-8">
           Welcome to Note Companion
