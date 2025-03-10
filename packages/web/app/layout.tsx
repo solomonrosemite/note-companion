@@ -20,10 +20,10 @@ export default function RootLayout({
 }) {
   return process.env.ENABLE_USER_MANAGEMENT == "true" ? (
     <ClerkProvider afterSignOutUrl="/sign-in">
-      <html lang="en">
+      <html lang="en" className="light">
         <PHProvider>
           <SignedIn>
-            <body className="">
+            <body className="light">
               <Toaster />
               <header className="p-4 border-b border-stone-300">
                 <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
@@ -44,7 +44,7 @@ export default function RootLayout({
             </body>
           </SignedIn>
           <SignedOut>
-            <body className="">
+            <body className="light">
               <Toaster />
               <main className="min-h-screen text-stone-900 font-sans">
                 <div className="flex items-center justify-center h-screen">
@@ -57,8 +57,8 @@ export default function RootLayout({
       </html>
     </ClerkProvider>
   ) : (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="light">
+      <body className="light">{children}</body>
     </html>
   );
 }

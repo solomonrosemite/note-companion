@@ -43,26 +43,26 @@ export default function FolderSelector() {
   }, [selectedFolder]);
 
   return (
-    <main className="flex flex-col items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+    <main className="flex flex-col items-center justify-center h-screen bg-gray-100">
       <div className="max-w-md px-6 py-12 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
           Note Companion
         </h1>
-        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+        <p className="mt-4 text-lg text-gray-600">
           Select a folder and let our AI-powered organizer sort your files for
           you.
         </p>
         <div className="mt-8">
           <Button
             onClick={handleSelectFolder}
-            className="inline-flex items-center justify-center w-full px-8 py-3 text-base font-medium text-white bg-gray-900 border border-transparent rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 dark:focus:ring-gray-100"
+            className="inline-flex items-center justify-center w-full px-8 py-3 text-base font-medium text-white bg-gray-900 border border-transparent rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900"
             size="lg"
           >
             <FolderIcon className="w-6 h-6 mr-2" />
             Select Folder
           </Button>
           {selectedFolder && (
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+            <p className="mt-4 text-lg text-gray-600">
               Selected Folder: {selectedFolder}
             </p>
           )}
@@ -77,7 +77,7 @@ export default function FolderSelector() {
               type="password"
             />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          <p className="text-sm text-gray-500 mt-2">
             You'll need to enter your OpenAI API key to use the file organizing
             feature. You can get your API key from the OpenAI website.
           </p>

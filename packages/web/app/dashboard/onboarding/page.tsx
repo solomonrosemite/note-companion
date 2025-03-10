@@ -26,7 +26,7 @@ const FEATURES = [
 
 export default function OnboardingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
       <main className="container mx-auto px-4 py-12">
         <div className="grid md:grid-cols-2 gap-12">
           <div>
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
         </div>
       </main>
 
-      <footer className="bg-gray-100 dark:bg-gray-900 py-8 mt-16">
+      <footer className="bg-gray-100 py-8 mt-16">
         <div className="container mx-auto px-4 text-center">
           <a href="https://discord.gg/udQnCRFyus" target="_blank" rel="noopener noreferrer">
             <Button variant="outline">Join our discord</Button>
