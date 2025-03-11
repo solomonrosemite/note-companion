@@ -8,11 +8,6 @@
   },
   "version": "1.0.0",
   "packageManager": "pnpm@9.15.4",
-  "pnpm": {
-    "patchedDependencies": {
-      "xcode@3.0.1": "patches/xcode@3.0.1.patch"
-    }
-  },
   "scripts": {
     "build": "pnpm run -r build",
     "dev": "pnpm run -r dev",
