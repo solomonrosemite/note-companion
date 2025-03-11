@@ -85,7 +85,7 @@ jobs:
         run: |
           # Build all packages including release-notes
           echo "Building packages..."
-          pnpm build --filter "@file-organizer/release-notes"
+          pnpm --filter  "@file-organizer/release-notes" build
           
           # Create a temporary file for the release data
           echo "Preparing release data..."
