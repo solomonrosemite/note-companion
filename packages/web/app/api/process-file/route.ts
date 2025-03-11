@@ -397,6 +397,7 @@ export async function POST(request: NextRequest) {
         const uploadedImage = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `image-${fileId}.jpg`,
+            // @ts-ignore
             content: processedBuffer,
           },
           purpose: "ocr" as FilePurpose
