@@ -200,7 +200,7 @@ export const checkTokenUsage = async (userId: string) => {
       .where(eq(UserUsageTable.userId, userId))
       .limit(1);
 
-    if (userUsage[0].tokenUsage >= userUsage[0].maxTokenUsage) {
+    if (userUsage[0]?.tokenUsage >= userUsage[0]?.maxTokenUsage) {
       return {
         remaining: 0,
         usageError: false,
@@ -208,7 +208,7 @@ export const checkTokenUsage = async (userId: string) => {
     }
 
     return {
-      remaining: userUsage[0].maxTokenUsage - userUsage[0].tokenUsage,
+      remaining: userUsage[0]?.maxTokenUsage - userUsage[0]?.tokenUsage,
       usageError: false,
     };
   } catch (error) {

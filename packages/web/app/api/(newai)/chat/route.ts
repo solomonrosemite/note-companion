@@ -1,19 +1,16 @@
-import { convertToCoreMessages, streamText, createDataStreamResponse, generateId } from "ai";
+import {
+  convertToCoreMessages,
+  streamText,
+  createDataStreamResponse,
+  generateId,
+} from "ai";
 import { NextResponse, NextRequest } from "next/server";
 import { incrementAndLogTokenUsage } from "@/lib/incrementAndLogTokenUsage";
-import { handleAuthorization } from "@/lib/handleAuthorization";
-import { GoogleGenerativeAIProviderMetadata } from "@ai-sdk/google";
-import { z } from "zod";
-
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { openai } from "@ai-sdk/openai";
 import { getModel } from "@/lib/models";
 import { getChatSystemPrompt } from "@/lib/prompts/chat-prompt";
 import { chatTools } from "./tools";
-
-interface GroundingMetadataItem {
-  content: string;
-  title: string;
-  relevanceScore: number;
-}
 
 export const maxDuration = 60;
 
@@ -21,7 +18,7 @@ export async function POST(req: NextRequest) {
   return createDataStreamResponse({
     execute: async (dataStream) => {
       try {
-        const { userId } = await handleAuthorization(req);
+        const { userId } = await handleAuthorizationV2(req);
         const {
           messages,
           newUnifiedContext,
@@ -30,25 +27,10 @@ export async function POST(req: NextRequest) {
           unifiedContext: oldUnifiedContext,
           model: bodyModel,
           enableSearchGrounding = false,
+          deepSearch = false,
         } = await req.json();
 
-        let chosenModelName;
-        if (enableSearchGrounding) {
-          console.log("Enabling search grounding");
-          console.log("GOOGLE_API_KEY:", process.env.GOOGLE_API_KEY);
-          console.log("GOOGLE_GENERATIVE_AI_API_KEY:", process.env.GOOGLE_GENERATIVE_AI_API_KEY);
-          if (process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-            console.log("Using Gemini model");
-            chosenModelName = "gemini-2.0-flash-exp";
-          } else {
-            console.log("Using GPT-4o model");
-            chosenModelName = "gpt-4o";
-          }
-        } else {
-          chosenModelName = "gpt-4o";
-        }
-        console.log("Chat using model:", chosenModelName);
-        const model = getModel(chosenModelName);
+        let chosenModelName = "gpt-4o";
 
         const contextString =
           newUnifiedContext ||
@@ -58,36 +40,97 @@ export async function POST(req: NextRequest) {
             })
             .join("\n\n");
 
-        dataStream.writeData('initialized call');
+        dataStream.writeData("initialized call");
 
-        const result = await streamText({
-          model,
-          system: getChatSystemPrompt(
-            contextString,
-            enableScreenpipe,
-            currentDatetime
-          ),
-          maxSteps: 3,
-          messages: convertToCoreMessages(messages),
-          tools: chatTools,
-          onFinish: async ({ usage, experimental_providerMetadata }) => {
-            console.log("Token usage:", usage);
-            const googleMetadata = experimental_providerMetadata?.google as unknown as GoogleGenerativeAIProviderMetadata | undefined;
-            console.log("Google metadata:", JSON.stringify(googleMetadata, null, 2));
+        if (enableSearchGrounding) {
+          console.log("Enabling search grounding with Responses API");
+          chosenModelName = "gpt-4o"; // Using standard gpt-4o with the Responses API
 
-            if (googleMetadata?.groundingMetadata) {
-              dataStream.writeMessageAnnotation({
-                type: "search-results",
-                groundingMetadata: googleMetadata.groundingMetadata
-              });
-            }
+          const result = await streamText({
+            model: openai.responses("gpt-4o"),
+            system: getChatSystemPrompt(
+              contextString,
+              enableScreenpipe,
+              currentDatetime
+            ),
+            maxSteps: 3,
+            messages: messages,
+            tools: {
+              // ...chatTools,
+              web_search_preview: openai.tools.webSearchPreview({
+                searchContextSize: deepSearch ? "high" : "medium",
+              }),
+            },
+            onFinish: async ({
+              usage,
+              sources,
+            }) => {
+              console.log("Token usage:", usage);
+              console.log("Search sources:", sources);
 
-            await incrementAndLogTokenUsage(userId, usage.totalTokens);
-            dataStream.writeData('call completed');
-          },
-        });
+              if (sources && sources.length > 0) {
+                // Map the sources to our expected citation format
+                const citations = sources.map((source) => ({
+                  url: source.url,
+                  title: source.title || source.url,
+                  // Default to 0 for indices if not provided
+                  startIndex: 0,
+                  endIndex: 0,
+                }));
 
-        result.mergeIntoDataStream(dataStream);
+                if (citations.length > 0) {
+                  dataStream.writeMessageAnnotation({
+                    type: "search-results",
+                    citations,
+                  });
+                }
+              }
+
+              await incrementAndLogTokenUsage(userId, usage.totalTokens);
+              dataStream.writeData("call completed");
+            },
+          });
+
+          result.mergeIntoDataStream(dataStream);
+        } else {
+          console.log("Chat using standard model:", chosenModelName);
+          const model = getModel(chosenModelName);
+
+          const result = await streamText({
+            model,
+            system: getChatSystemPrompt(
+              contextString,
+              enableScreenpipe,
+              currentDatetime
+            ),
+            maxSteps: 3,
+            messages: messages,
+            tools: chatTools,
+            onFinish: async ({ usage, sources }) => {
+              console.log("Token usage:", sources);
+              const citations = sources?.map((source) => ({
+                url: source.url,
+                title: source.title || source.url,
+                // Default to 0 for indices if not provided
+                startIndex: 0,
+                endIndex: 0,
+              }));
+              console.log("Sources:", citations);
+
+              if (citations?.length > 0) {
+                dataStream.writeMessageAnnotation({
+                  type: "search-results",
+                  citations,
+                });
+              }
+
+              await incrementAndLogTokenUsage(userId, usage.totalTokens);
+              dataStream.writeData("call completed");
+            },
+          });
+
+          result.mergeIntoDataStream(dataStream);
+        }
       } catch (error) {
         console.error("Error in POST request:", error);
         throw error;

@@ -1,21 +1,24 @@
 import { NextRequest } from "next/server";
 import { POST } from "./route";
-// Mock the Google AI SDK
-jest.mock("@ai-sdk/google", () => ({
-  google: jest.fn(() => ({
+
+// Mock the OpenAI SDK
+jest.mock("@ai-sdk/openai", () => ({
+  openai: jest.fn(() => ({
     generateText: jest.fn().mockImplementation(async () => ({
       text: "Test response",
       experimental_providerMetadata: {
-        google: {
-          groundingMetadata: {
-            webSearchQueries: ["test query"],
-            searchEntryPoint: { renderedContent: "Test content" },
-            groundingSupports: [{
-              segment: { text: "Test segment", startIndex: 0, endIndex: 11 },
-              groundingChunkIndices: [0],
-              confidenceScores: [0.95]
-            }]
-          }
+        openai: {
+          annotations: [
+            {
+              type: "url_citation",
+              url_citation: {
+                url: "https://example.com",
+                title: "Example Website",
+                start_index: 10,
+                end_index: 20
+              }
+            }
+          ]
         }
       }
     }))
@@ -27,12 +30,12 @@ describe("Chat API Route", () => {
     jest.clearAllMocks();
   });
 
-  it("should include search grounding metadata in response", async () => {
+  it("should include citation metadata in response", async () => {
     const mockRequest = new NextRequest("http://localhost:3000/api/chat", {
       method: "POST",
       body: JSON.stringify({
         messages: [{ role: "user", content: "What's the latest news about AI?" }],
-        model: "gemini-1.5-pro",
+        model: "gpt-4o-search-preview",
         enableSearchGrounding: true
       }),
       headers: {
@@ -58,7 +61,7 @@ describe("Chat API Route", () => {
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const data = JSON.parse(line.slice(5));
-          if (data.type === "metadata" && data.data?.groundingMetadata) {
+          if (data.type === "metadata" && data.data?.citations) {
             foundMetadata = true;
             break;
           }

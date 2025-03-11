@@ -48,6 +48,14 @@ const models = {
     apiKey: process.env.OPENAI_API_KEY,
     baseURL,
   })("gpt-4o-mini"),
+  "gpt-4o-search-preview": createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL,
+  })("gpt-4o-search-preview"),
+  "gpt-4o-mini-search-preview": createOpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL,
+  })("gpt-4o-mini-search-preview"),
   "claude-3-5-sonnet-20240620": createAnthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
     baseURL: anthropicBaseURL,

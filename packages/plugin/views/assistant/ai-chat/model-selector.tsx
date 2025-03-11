@@ -4,8 +4,7 @@ import { usePlugin } from '../provider';
 
 // Add a mapping for display names
 const MODEL_DISPLAY_NAMES: Record<ModelType, string> = {
-  'gpt-4o': 'Classic',
-  'llama3.2': 'Local LLM',
+  'gpt-4o': 'Cloud',
   'custom': 'Ollama Model'
 } as const;
 
