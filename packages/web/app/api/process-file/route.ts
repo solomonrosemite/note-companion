@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
         const uploadedFile = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `file-${fileId}.pdf`,
+            // @ts-ignore
             content: buffer,
           },
           // Use our custom type instead of 'any'
