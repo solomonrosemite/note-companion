@@ -139,6 +139,15 @@ export async function incrementTokenUsage(
   tokens: number
 ): Promise<{ remaining: number; usageError: boolean }> {
   try {
+    // Validate tokens is a valid number
+    if (Number.isNaN(tokens) || !Number.isFinite(tokens)) {
+      console.warn(`Invalid token value received for user ${userId}: ${tokens}, using 0 instead`);
+      tokens = 0;
+    }
+    
+    // Ensure tokens is a non-negative integer
+    tokens = Math.max(0, Math.floor(tokens));
+    
     // First check if the user has a usage row
     const existingUsage = await db
       .select()
