@@ -10,10 +10,11 @@ import AIChatSidebar from "./ai-chat/container";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Meetings } from "./organizer/meetings/meetings";
 import ReactMarkdown from 'react-markdown';
+import { SyncTab } from "./synchronizer/sync-tab";
 
 export const ORGANIZER_VIEW_TYPE = "fo2k.assistant.sidebar2";
 
-type Tab = "organizer" | "inbox" | "chat" | "meetings";
+type Tab = "organizer" | "inbox" | "chat" | "meetings" | "sync";
 
 function TabContent({
   activeTab,
@@ -102,6 +103,14 @@ function TabContent({
           />
         </div>
       </div>
+
+      <div
+        className={`absolute inset-0 ${
+          activeTab === "sync" ? "block" : "hidden"
+        }`}
+      >
+        <SyncTab plugin={plugin} />
+      </div>
     </div>
   );
 }
@@ -119,13 +128,12 @@ function TabButton({
     <button
       onClick={onClick}
       className={`
-                fo-px-3 fo-py-2 fo-text-sm fo-font-medium fo-shadow-none fo-cursor-pointer fo-bg-transparent
-
-       ${
-         isActive
-           ? "fo-bg-[--interactive-accent] fo-text-[--text-on-accent] "
-           : "fo-bg-[--background-primary] fo-text-[--text-muted] hover:fo-bg-[--background-modifier-hover]"
-       }
+                px-3 py-2 text-sm font-medium shadow-none cursor-pointer bg-transparent
+                ${
+                  isActive
+                    ? "bg-[--interactive-accent] text-black"
+                    : "bg-[--background-primary] text-[--text-muted] hover:bg-[--background-modifierhover] hover:text-black"
+                }
       `}
     >
       {children}
@@ -177,6 +185,12 @@ function AssistantContent({
         >
           Meetings
         </TabButton>
+        <TabButton
+          isActive={activeTab === "sync"}
+          onClick={() => setActiveTab("sync")}
+        >
+          Sync
+        </TabButton>
       </div>
 
       <div className="pt-4 h-full">
@@ -219,6 +233,12 @@ export class AssistantViewWrapper extends ItemView {
       id: "open-meetings-tab",
       name: "Open Meetings Tab",
       callback: () => this.activateTab("meetings"),
+    });
+    
+    this.plugin.addCommand({
+      id: "open-sync-tab",
+      name: "Open Sync Tab",
+      callback: () => this.activateTab("sync"),
     });
   }
 

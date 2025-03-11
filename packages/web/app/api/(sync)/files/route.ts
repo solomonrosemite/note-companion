@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFiles } from "@/app/dashboard/sync/actions";
 import { auth } from "@clerk/nextjs/server";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
+import { request } from "http";
 
 // Define the response type locally to avoid importing from actions
 type FilesResponse = {
@@ -24,20 +26,9 @@ type FilesResponse = {
 };
 
 export async function GET(request: NextRequest) {
+  const { userId } = await handleAuthorizationV2(request);
   try {
-    // Check authentication first
-    const { userId } = await auth();
-    const authHeader = request.headers.get("authorization");
-
-    // Handle API key auth from mobile app
-    if (!userId && authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-
-      if (!token) {
-        console.error("Unauthorized files list attempt - invalid token");
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
+    if (userId) {
       // Continue with the request for mobile app with token
       const page = parseInt(
         request.nextUrl.searchParams.get("page") || "1",
@@ -49,7 +40,7 @@ export async function GET(request: NextRequest) {
       );
 
       // Pass the token to getFiles for mobile authentication
-      const result = await getFiles({ page, limit });
+      const result = await getFiles({ page, limit }, userId);
 
       if ("error" in result) {
         return NextResponse.json(

@@ -1,4 +1,4 @@
-// import '../styles.css'; // Removed to prevent JS from injecting CSS
+import './styles.css';
 
 // Add Node.js type declarations
 declare namespace NodeJS {

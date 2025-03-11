@@ -1,4 +1,5 @@
 export class FileOrganizerSettings {
+  
   API_KEY = "";
   isLicenseValid = false;
   useLogs = true;
@@ -12,6 +13,7 @@ export class FileOrganizerSettings {
   fabricPaths = "_NoteCompanion/Fabric";
   bypassedFilePath = "_NoteCompanion/Bypassed";
   errorFilePath = "_NoteCompanion/Errors";
+  syncFolderPath = "_NoteCompanion/Sync";
 
   // inbox settings
   useSimilarTags = true;

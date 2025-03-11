@@ -2,13 +2,13 @@ import { Notice, RequestUrlResponse, requestUrl } from "obsidian";
 import { logMessage } from "./someUtils";
 import { logger } from "./services/logger";
 
-export async function makeApiRequest<T>(
+export async function makeApiRequest<T = any>(
   requestFn: () => Promise<RequestUrlResponse>
-): Promise<RequestUrlResponse> {
+): Promise<T> {
   logMessage("Making API request", requestFn);
   const response: RequestUrlResponse = await requestFn();
   if (response.status >= 200 && response.status < 300) {
-    return response;
+    return response.json as T;
   }
   if (response.json.error) {
     new Notice(`File Organizer error: ${response.json.error}`, 6000);

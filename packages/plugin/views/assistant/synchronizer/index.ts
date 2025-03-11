@@ -1,0 +1,1 @@
+export { SyncTab } from './sync-tab';

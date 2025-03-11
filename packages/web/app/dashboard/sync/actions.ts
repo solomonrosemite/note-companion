@@ -60,12 +60,17 @@ const ALLOWED_FILE_TYPES = {
 };
 
 // Get files with pagination
-export async function getFiles({
-  page = 1,
-  limit = 10,
-}: PaginationParams): Promise<FileListResponse | { error: string }> {
+export async function getFiles(
+  { page = 1, limit = 10 },
+  someUserId?: string
+): Promise<FileListResponse | { error: string }> {
   try {
-    const { userId } = await auth();
+    let userId = someUserId;
+    if (!someUserId) {
+      const authResult = await auth();
+      userId = authResult.userId;
+    }
+
     if (!userId) {
       return { error: "Unauthorized" };
     }
@@ -120,7 +125,6 @@ export async function getFileStatus(
   userId?: string
 ): Promise<FileStatusResponse | { error: string }> {
   try {
-
     // Regular web authentication flow
     if (!userId) {
       return { error: "Unauthorized" };
