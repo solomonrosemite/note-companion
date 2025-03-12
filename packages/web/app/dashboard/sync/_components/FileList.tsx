@@ -496,6 +496,7 @@ export function FileList({ pageSize = 12 }: FileListProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <p className="text-red-600">{error}</p>
+        {/* @ts-expect-error */}
         <Button onClick={fetchFiles}>Try Again</Button>
       </div>
     );
