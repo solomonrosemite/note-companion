@@ -36,11 +36,12 @@ export async function POST(req: NextRequest) {
     
     // Check if user already exists - handle clerkClient as a function
     const clerk = await clerkClient();
-    const existingUsers = await clerk.users.getUserList({
+    const existingUsersResponse = await clerk.users.getUserList({
       emailAddress: [email],
     });
     
-    if (existingUsers.length > 0) {
+    // Access the data property which contains the array of users
+    if (existingUsersResponse.data && existingUsersResponse.data.length > 0) {
       return NextResponse.json({
         success: false,
         error: "A user with this email already exists",
