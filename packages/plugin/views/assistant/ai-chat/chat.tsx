@@ -126,6 +126,10 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   }, [contextItems, isLightweightMode]);
   logger.debug("contextString", contextString);
 
+  const [selectedModel, setSelectedModel] = useState<ModelType>(
+    plugin.settings.selectedModel
+  );
+
   const chatBody = {
     currentDatetime: window.moment().format("YYYY-MM-DDTHH:mm:ssZ"),
     enableScreenpipe: plugin.settings.enableScreenpipe,
@@ -268,11 +272,6 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   }, [messages, history]);
 
   const [maxContextSize] = useState(80 * 1000); // Keep this one
-
-  // Update state to default to gpt-4
-  const [selectedModel, setSelectedModel] = useState<ModelType>(
-    plugin.settings.selectedModel
-  );
 
   useEffect(() => {
     // Update selectedModel when plugin settings change
