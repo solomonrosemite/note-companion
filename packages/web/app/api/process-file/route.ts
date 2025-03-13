@@ -77,14 +77,17 @@ async function compressImage(buffer: Buffer, fileType: string): Promise<Buffer> 
 }
 
 export async function POST(request: NextRequest) {
-  let fileId: number | null = null;
+  let fileId: number | string | null = null;
   
   try {
     // Check authentication first
     const { userId } = await auth();
     const authHeader = request.headers.get("authorization");
-    const payload = await request.json() as { fileId: number };
+    const payload = await request.json() as { fileId: number | string };
     fileId = payload.fileId;
+    
+    // Log the received fileId for debugging
+    console.log("Received fileId:", fileId, "Type:", typeof fileId);
     
     // Handle API key auth from mobile app
     if (!userId && authHeader) {
@@ -152,11 +155,54 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      // Convert fileId to number if possible for database query
+      let queryFileId: number;
+      try {
+        if (typeof fileId === 'string' && fileId.startsWith('text-')) {
+          console.log("Mobile text ID detected, querying using string ID:", fileId);
+          // Need to query by string ID for mobile app-generated IDs
+          // Check if we have the mobile text ID in our database
+          const [file] = await db
+            .select()
+            .from(uploadedFiles)
+            .where(eq(uploadedFiles.originalName, fileId))
+            .limit(1);
+            
+          if (!file) {
+            return NextResponse.json(
+              { error: "File not found" },
+              { status: 404 }
+            );
+          }
+          
+          // Use the numeric ID from the database for subsequent operations
+          queryFileId = file.id;
+        } else {
+          // Try to convert to number for standard fileIds
+          queryFileId = Number(fileId);
+          
+          if (isNaN(queryFileId)) {
+            return NextResponse.json(
+              { error: "Invalid file ID format" },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error converting fileId:", error);
+        return NextResponse.json(
+          { error: "Invalid file ID format" },
+          { status: 400 }
+        );
+      }
+      
+      console.log("Using queryFileId for database operations:", queryFileId);
+      
       // Get the file record
       const [file] = await db
         .select()
         .from(uploadedFiles)
-        .where(eq(uploadedFiles.id, fileId))
+        .where(eq(uploadedFiles.id, queryFileId))
         .limit(1);
       
       if (!file) {
@@ -180,7 +226,7 @@ export async function POST(request: NextRequest) {
       await db
         .update(uploadedFiles)
         .set({ status: "processing" })
-        .where(eq(uploadedFiles.id, fileId));
+        .where(eq(uploadedFiles.id, queryFileId));
       
       // Return success response
       return NextResponse.json({ success: true });
@@ -199,11 +245,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert fileId to number if possible for database query
+    let queryFileId: number;
+    try {
+      if (typeof fileId === 'string' && fileId.startsWith('text-')) {
+        console.log("Mobile text ID detected, querying using string ID:", fileId);
+        // Need to query by string ID for mobile app-generated IDs
+        // Check if we have the mobile text ID in our database
+        const [file] = await db
+          .select()
+          .from(uploadedFiles)
+          .where(eq(uploadedFiles.originalName, fileId))
+          .limit(1);
+          
+        if (!file) {
+          return NextResponse.json(
+            { error: "File not found" },
+            { status: 404 }
+          );
+        }
+        
+        // Use the numeric ID from the database for subsequent operations
+        queryFileId = file.id;
+      } else {
+        // Try to convert to number for standard fileIds
+        queryFileId = Number(fileId);
+        
+        if (isNaN(queryFileId)) {
+          return NextResponse.json(
+            { error: "Invalid file ID format" },
+            { status: 400 }
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error converting fileId:", error);
+      return NextResponse.json(
+        { error: "Invalid file ID format" },
+        { status: 400 }
+      );
+    }
+    
+    console.log("Using queryFileId for database operations:", queryFileId);
+    
     // Get file record
     const [file] = await db
       .select()
       .from(uploadedFiles)
-      .where(eq(uploadedFiles.id, fileId))
+      .where(eq(uploadedFiles.id, queryFileId))
       .limit(1);
 
     if (!file) {
@@ -224,7 +313,7 @@ export async function POST(request: NextRequest) {
     await db
       .update(uploadedFiles)
       .set({ status: "processing" })
-      .where(eq(uploadedFiles.id, fileId));
+      .where(eq(uploadedFiles.id, queryFileId));
 
     // Get file from Blob storage
     const response = await fetch(file.blobUrl);
@@ -255,7 +344,7 @@ export async function POST(request: NextRequest) {
         // 1. Upload file to Mistral
         uploadedFile = await mistralClient.files.upload({
           file: {
-            fileName: file.originalName || `file-${fileId}.pdf`,
+            fileName: file.originalName || `file-${queryFileId}.pdf`,
             // @ts-ignore
             content: buffer,
           },
@@ -399,7 +488,7 @@ export async function POST(request: NextRequest) {
         // 1. Upload image to Mistral
         uploadedImage = await mistralClient.files.upload({
           file: {
-            fileName: file.originalName || `image-${fileId}.jpg`,
+            fileName: file.originalName || `image-${queryFileId}.jpg`,
             // @ts-ignore
             content: processedBuffer,
           },
@@ -548,7 +637,7 @@ export async function POST(request: NextRequest) {
           error: error.message || "OCR processing failed",
           updatedAt: new Date(),
         })
-        .where(eq(uploadedFiles.id, fileId));
+        .where(eq(uploadedFiles.id, queryFileId));
       
       throw error; // Rethrow to be caught by the outer try-catch
     }
@@ -656,7 +745,7 @@ export async function POST(request: NextRequest) {
         tokensUsed: tokensUsed,
         updatedAt: new Date(),
       })
-      .where(eq(uploadedFiles.id, fileId));
+      .where(eq(uploadedFiles.id, queryFileId));
 
     // Update user's token usage if user management is enabled
     if (process.env.ENABLE_USER_MANAGEMENT === "true") {
@@ -679,14 +768,41 @@ export async function POST(request: NextRequest) {
 
     // Update file status to error if we have a fileId
     if (fileId !== null) {
-      await db
-        .update(uploadedFiles)
-        .set({
-          status: "error",
-          error: err.message,
-          updatedAt: new Date(),
-        })
-        .where(eq(uploadedFiles.id, fileId));
+      try {
+        // For error handling, we need to be more careful with the ID
+        // since queryFileId might not be defined yet
+        let errorQueryFileId: number;
+        
+        try {
+          // Try to parse the fileId to a number for the database operation
+          if (typeof fileId === 'string' && fileId.startsWith('text-')) {
+            // We won't try to look up by originalName here as that might fail again
+            console.log("Cannot update error status for text ID:", fileId);
+            throw new Error("Cannot update text ID status");
+          } else {
+            errorQueryFileId = Number(fileId);
+            if (isNaN(errorQueryFileId)) {
+              throw new Error("Invalid file ID for error status update");
+            }
+          }
+          
+          // Only update if we have a valid numeric ID
+          await db
+            .update(uploadedFiles)
+            .set({
+              status: "error",
+              error: err.message,
+              updatedAt: new Date(),
+            })
+            .where(eq(uploadedFiles.id, errorQueryFileId));
+        } catch (updateError) {
+          // Log error but don't fail if we can't update status
+          console.error("Could not update error status in DB:", updateError);
+        }
+      } catch (updateError) {
+        // Log error but don't fail if we can't update status
+        console.error("Could not update error status in DB:", updateError);
+      }
     }
 
     return NextResponse.json(
