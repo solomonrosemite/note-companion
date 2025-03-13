@@ -245,12 +245,15 @@ export async function POST(request: NextRequest) {
     const fileType = file.fileType.toLowerCase();
     let textContent: string = '';
     let tokensUsed: number = 0;
+    let uploadedFile: { id: string } | null = null;
+    let uploadedImage: { id: string } | null = null;
+    let signedUrl: { url: string } | null = null;
     
     try {
       if (fileType === 'application/pdf' || fileType.includes('pdf')) {
         // For PDFs, use the document OCR processing
         // 1. Upload file to Mistral
-        const uploadedFile = await mistralClient.files.upload({
+        uploadedFile = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `file-${fileId}.pdf`,
             // @ts-ignore
@@ -263,7 +266,7 @@ export async function POST(request: NextRequest) {
         console.log("Uploaded PDF file to Mistral:", uploadedFile.id);
         
         // 2. Get signed URL for the uploaded file
-        const signedUrl = await mistralClient.files.getSignedUrl({
+        signedUrl = await mistralClient.files.getSignedUrl({
           fileId: uploadedFile.id,
         });
         
@@ -394,7 +397,7 @@ export async function POST(request: NextRequest) {
         const processedBuffer = await compressImage(buffer, fileType);
         
         // 1. Upload image to Mistral
-        const uploadedImage = await mistralClient.files.upload({
+        uploadedImage = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `image-${fileId}.jpg`,
             // @ts-ignore
@@ -406,7 +409,7 @@ export async function POST(request: NextRequest) {
         console.log("Uploaded image file to Mistral:", uploadedImage.id);
         
         // 2. Get signed URL for the uploaded image
-        const signedUrl = await mistralClient.files.getSignedUrl({
+        signedUrl = await mistralClient.files.getSignedUrl({
           fileId: uploadedImage.id,
         });
         
@@ -566,8 +569,33 @@ export async function POST(request: NextRequest) {
         console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
         
         try {
-          // Since we already have the image uploaded to Mistral, use the chat API to extract text
-          const chatResponse = await mistralClient.chat.completions.create({
+          // Get the signed URL again if needed
+          let imageUrl = '';
+          if (fileType === 'application/pdf' || fileType.includes('pdf')) {
+            // For PDFs, we should have the signed URL from earlier
+            if (uploadedFile?.id) {
+              const pdfSignedUrl = await mistralClient.files.getSignedUrl({
+                fileId: uploadedFile.id,
+              });
+              imageUrl = pdfSignedUrl.url;
+            }
+          } else {
+            // For images, we should have the signed URL from earlier
+            if (uploadedImage?.id) {
+              const imageSignedUrl = await mistralClient.files.getSignedUrl({
+                fileId: uploadedImage.id,
+              });
+              imageUrl = imageSignedUrl.url;
+            }
+          }
+          
+          if (!imageUrl) {
+            console.warn("No image URL available for chat-based OCR extraction");
+            return;
+          }
+          
+          // Use the correct Mistral API chat method from SDK v1.5.1
+          const chatResponse = await mistralClient.chat.complete({
             model: "mistral-medium",
             messages: [
               {
@@ -583,26 +611,32 @@ export async function POST(request: NextRequest) {
                   },
                   {
                     type: "image_url",
-                    image_url: signedUrl.url
+                    imageUrl: imageUrl
                   }
                 ]
               }
             ],
             temperature: 0.1,
-            max_tokens: 4000
+            maxTokens: 4000
           });
           
           if (chatResponse.choices && chatResponse.choices[0]?.message?.content) {
-            const extractedText = chatResponse.choices[0].message.content.trim();
-            console.log("Successfully extracted text using chat API:", extractedText.substring(0, 100) + "...");
+            const extractedText = chatResponse.choices[0].message.content;
+            // Check if extractedText is a string before using trim()
+            const trimmedText = typeof extractedText === 'string' ? extractedText.trim() : 
+              (Array.isArray(extractedText) ? extractedText.join(' ').trim() : '');
+              
+            console.log("Successfully extracted text using chat API:", 
+              (typeof trimmedText === 'string' && trimmedText.length > 100) ? 
+                trimmedText.substring(0, 100) + "..." : trimmedText);
             
             // Only update if we got meaningful text back
-            if (extractedText && extractedText.length > 10 && !markdownImagePattern.test(extractedText)) {
-              textContent = extractedText;
+            if (trimmedText && trimmedText.length > 10 && !markdownImagePattern.test(trimmedText)) {
+              textContent = trimmedText;
               
               // Update tokens used
-              if (chatResponse.usage?.total_tokens) {
-                tokensUsed += chatResponse.usage.total_tokens;
+              if (chatResponse.usage?.totalTokens) {
+                tokensUsed += chatResponse.usage.totalTokens;
               }
             }
           }
