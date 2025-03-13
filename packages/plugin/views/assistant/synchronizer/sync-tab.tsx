@@ -430,7 +430,7 @@ export function SyncTab({ plugin }: { plugin: FileOrganizer }) {
 
       <div className="sync-how-to-card">
         <div className="sync-card-content">
-          <div className="sync-icon-container">
+          <div className="">
             <Cloud className="sync-icon" />
           </div>
           <div>

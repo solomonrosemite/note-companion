@@ -128,7 +128,7 @@ export function MainDashboard() {
 
   // If the user hasn't completed onboarding, show that first
   if (!isOnboardingComplete) {
-    return <OnboardingWizard onComplete={handleOnboardingComplete} />;
+    return <OnboardingWizard plugin={plugin} onComplete={handleOnboardingComplete} />;
   }
 
   // Otherwise, render the main "merged" UI
