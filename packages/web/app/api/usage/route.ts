@@ -1,14 +1,11 @@
 import { NextResponse, NextRequest } from "next/server";
 import { db, UserUsageTable } from "@/drizzle/schema";
-import { and, eq, not } from "drizzle-orm";
-import { verifyKey } from "@unkey/api";
+import { and, eq } from "drizzle-orm";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "");
-    const { result } = await verifyKey(token || "");
-    console.log(result)
-    const userId = result?.ownerId;
+    const { userId } = await handleAuthorizationV2(request);
 
     const userUsage = await db
       .select({
@@ -18,11 +15,7 @@ export async function GET(request: NextRequest) {
         currentPlan: UserUsageTable.currentPlan,
       })
       .from(UserUsageTable)
-      .where(
-        and(
-          eq(UserUsageTable.userId, userId),
-        )
-      )
+      .where(and(eq(UserUsageTable.userId, userId)))
       .limit(1);
 
     if (!userUsage.length) {
