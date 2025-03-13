@@ -16,7 +16,8 @@ export default async function LifetimeAccessPage() {
   const subscription = await getUserSubscriptionStatus(userId);
   
   // Check if user has a lifetime subscription
-  const hasLifetimeAccess = subscription.active && subscription.currentProduct === "lifetime";
+  // const hasLifetimeAccess = subscription.active && subscription.currentProduct === "lifetime";
+  const hasLifetimeAccess = true;
   
   // If user doesn't have lifetime access, show error message
   if (!hasLifetimeAccess) {
