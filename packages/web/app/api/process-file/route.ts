@@ -556,6 +556,63 @@ export async function POST(request: NextRequest) {
       textContent = "⚠️ OCR processing completed, but no text could be extracted from this document.";
     }
 
+    // Check if the textContent only contains markdown image references and not actual text
+    const markdownImagePattern = /^!\[.*?\]\(.*?\)$|^!\[.*?\]$/;
+    if (markdownImagePattern.test(textContent.trim())) {
+      console.warn("OCR returned only an image reference instead of extracted text:", textContent);
+      
+      // If the file is an image, try to process it again with more specific instructions
+      if (fileType.startsWith('image/')) {
+        console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
+        
+        try {
+          // Since we already have the image uploaded to Mistral, use the chat API to extract text
+          const chatResponse = await mistralClient.chat.completions.create({
+            model: "mistral-medium",
+            messages: [
+              {
+                role: "system",
+                content: "You are an OCR assistant. Extract all visible text from the image. Return ONLY the extracted text, nothing else."
+              },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Extract all text from this image. Return ONLY the extracted text content, with no additional explanation or formatting."
+                  },
+                  {
+                    type: "image_url",
+                    image_url: signedUrl.url
+                  }
+                ]
+              }
+            ],
+            temperature: 0.1,
+            max_tokens: 4000
+          });
+          
+          if (chatResponse.choices && chatResponse.choices[0]?.message?.content) {
+            const extractedText = chatResponse.choices[0].message.content.trim();
+            console.log("Successfully extracted text using chat API:", extractedText.substring(0, 100) + "...");
+            
+            // Only update if we got meaningful text back
+            if (extractedText && extractedText.length > 10 && !markdownImagePattern.test(extractedText)) {
+              textContent = extractedText;
+              
+              // Update tokens used
+              if (chatResponse.usage?.total_tokens) {
+                tokensUsed += chatResponse.usage.total_tokens;
+              }
+            }
+          }
+        } catch (chatError) {
+          console.error("Error using chat API for better text extraction:", chatError);
+          // Continue with original result if the chat API fails
+        }
+      }
+    }
+
     // Update database with results
     await db
       .update(uploadedFiles)

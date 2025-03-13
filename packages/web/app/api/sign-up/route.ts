@@ -6,12 +6,8 @@ import { createEmptyUserUsage } from "@/drizzle/schema";
 export async function POST(req: NextRequest) {
   try {
     // For development mode, we'll use the current auth session if available
-<<<<<<< HEAD
     const authResult = await auth();
     const userId = authResult.userId;
-=======
-    const { userId, } = await auth();
->>>>>>> 7c57e852 (new fix)
     
     // If we're in development mode and have a userId, use it
     if (process.env.NODE_ENV === 'development' && userId) {
@@ -38,25 +34,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-<<<<<<< HEAD
     // Check if user already exists - handle clerkClient as a function
     const clerk = await clerkClient();
     const existingUsersResponse = await clerk.users.getUserList({
-=======
-
-    const client = await clerkClient();
-    const existingUsers = await client.users.getUserList({
->>>>>>> 7c57e852 (new fix)
       emailAddress: [email],
     });
 
     
-<<<<<<< HEAD
     // Access the data property which contains the array of users
     if (existingUsersResponse.data && existingUsersResponse.data.length > 0) {
-=======
-    if (existingUsers.data.length > 0) {
->>>>>>> 7c57e852 (new fix)
       return NextResponse.json({
         success: false,
         error: "A user with this email already exists",
@@ -64,11 +50,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Create the user in Clerk
-<<<<<<< HEAD
     const user = await clerk.users.createUser({
-=======
-    const user = await client.users.createUser({
->>>>>>> 7c57e852 (new fix)
       emailAddress: [email],
       password,
     });
