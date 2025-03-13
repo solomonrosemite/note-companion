@@ -17,7 +17,7 @@ export default async function LifetimeAccessPage() {
   
   // Check if user has a lifetime subscription
   const hasLifetimeAccess2 = subscription.active && subscription.currentProduct === "lifetime";
-  console.log("hasLifetimeAccess2", hasLifetimeAccess2);
+  console.log("hasLifetimeAccess2", hasLifetimeAccess2, subscription);
 
   const hasLifetimeAccess = true;
   
