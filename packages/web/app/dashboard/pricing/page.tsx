@@ -2,32 +2,28 @@
 
 import { PricingCards } from "@/components/pricing-cards";
 import { Star } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 export default function PlanSelectionPage() {
   return (
-    <section className="max-w-6xl mx-auto px-4 py-16 bg-gradient-to-b from-white to-gray-50">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-violet-800 to-violet-500">
-          One tool to stay organized
+    <div className="container max-w-6xl mx-auto p-6">
+      <div className="mb-10">
+        <h1 className="text-3xl font-bold mb-3 text-slate-800">
+          Pricing Plans
         </h1>
-        <p className="text-lg md:text-xl mb-8 text-gray-700 max-w-2xl mx-auto">
-          Organize anything from meetings to handwritten notes with our powerful AI companion.
+        <p className="text-slate-600 max-w-2xl">
+          Choose the plan that best fits your needs. All plans include our core features with different levels of access and usage limits.
         </p>
       </div>
       
       {/* Key Features Section */}
-      <div className="mb-14">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center justify-center">
-            <span className="bg-amber-100 text-amber-600 p-2 rounded-lg mr-3">
-              <Star className="h-6 w-6" />
-            </span>
-            Key Features
-          </h2>
-          <p className="text-gray-600 mt-3 max-w-2xl mx-auto">Powerful tools designed to enhance your note-taking and organization workflow</p>
-        </div>
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold text-slate-800 mb-4 flex items-center">
+          <Star className="h-5 w-5 text-amber-500 mr-2" />
+          Key Features
+        </h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { 
               name: "Smart Organization", 
@@ -50,28 +46,29 @@ export default function PlanSelectionPage() {
               description: "End-to-end encryption keeps your data private and secure" 
             }
           ].map((feature, idx) => (
-            <div 
+            <Card 
               key={idx} 
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-violet-200 text-center group relative overflow-hidden"
+              className="p-5 border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow transition-all duration-300"
             >
-              <div className="absolute -right-12 -top-12 w-24 h-24 bg-violet-50 rounded-full opacity-70 group-hover:bg-violet-100 transition-colors"></div>
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-50 flex items-center justify-center mx-auto mb-5 group-hover:from-violet-200 group-hover:to-violet-100 transition-colors z-10 relative">
-                <span className="text-2xl">{feature.icon}</span>
+              <div className="flex items-center mb-3">
+                <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mr-3">
+                  <span className="text-xl">{feature.icon}</span>
+                </div>
+                <h3 className="font-medium text-slate-800">{feature.name}</h3>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-violet-700 transition-colors">{feature.name}</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
-            </div>
+              <p className="text-slate-600 text-sm">{feature.description}</p>
+            </Card>
           ))}
         </div>
       </div>
       
       <PricingCards />
       
-      <div className="mt-12 text-center">
-        <p className="text-sm text-gray-500">
-          All plans include our core features. Have questions? <a href="#" className="text-violet-600 hover:underline">Contact us</a>
+      <div className="mt-8 pt-6 border-t border-slate-200">
+        <p className="text-sm text-slate-500">
+          All plans include our core features. Have questions? <a href="#" className="text-blue-600 hover:underline">Contact us</a>
         </p>
       </div>
-    </section>
+    </div>
   );
 }
