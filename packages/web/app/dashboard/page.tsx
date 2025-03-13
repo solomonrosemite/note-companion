@@ -386,27 +386,7 @@ export default function DashboardPage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/files">
-              <Files className="mr-2 h-4 w-4" />
-              View All Files
-            </Link>
-          </Button>
-          <label htmlFor="file-upload-footer" className="cursor-pointer">
-            <Button variant="default" size="sm">
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Files
-            </Button>
-            <input
-              id="file-upload-footer"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-          </label>
-        </CardFooter>
+       
       </Card>
     </div>
   );
