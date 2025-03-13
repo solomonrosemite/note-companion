@@ -21,7 +21,8 @@ import {
   FileText,
   FileImage,
   Eye,
-  Download
+  Download,
+  CloudUpload
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -504,8 +505,22 @@ export function FileList({ pageSize = 12 }: FileListProps) {
 
   if (files.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-2">
-        <p className="text-muted-foreground">No files uploaded yet</p>
+      <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6 bg-slate-50 rounded-xl text-center">
+        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm">
+          <CloudUpload className="h-10 w-10 text-violet-500" />
+        </div>
+        <div className="max-w-md">
+          <h3 className="text-xl font-semibold mb-2">Welcome to Note Companion Sync</h3>
+          <p className="text-gray-600 mb-4">
+            Note Companion Sync is a secure way to create OCR from your images and documents.
+          </p>
+          <div className="flex flex-col space-y-2 items-center">
+            <div className="flex items-center bg-blue-50 p-2 rounded-lg">
+              <Clock className="h-5 w-5 text-blue-500 mr-2" />
+              <span className="text-sm text-blue-700">Coming soon: Easy screenshot capturing with our mobile app</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

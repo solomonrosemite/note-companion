@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     const existingUsersResponse = await clerk.users.getUserList({
       emailAddress: [email],
     });
+
     
     // Access the data property which contains the array of users
     if (existingUsersResponse.data && existingUsersResponse.data.length > 0) {

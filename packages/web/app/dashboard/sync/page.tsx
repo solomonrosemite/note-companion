@@ -5,7 +5,7 @@ import { CloudUpload, RefreshCw, Clock, CheckCircle } from "lucide-react";
 
 export default function SyncDashboard() {
   return (
-    <div className="container max-w-7xl mx-auto p-6">
+    <div className="container max-w-6xl mx-auto p-6">
       <style jsx global>{`
         .markdown-body {
           color: #24292e;

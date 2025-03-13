@@ -245,12 +245,15 @@ export async function POST(request: NextRequest) {
     const fileType = file.fileType.toLowerCase();
     let textContent: string = '';
     let tokensUsed: number = 0;
+    let uploadedFile: { id: string } | null = null;
+    let uploadedImage: { id: string } | null = null;
+    let signedUrl: { url: string } | null = null;
     
     try {
       if (fileType === 'application/pdf' || fileType.includes('pdf')) {
         // For PDFs, use the document OCR processing
         // 1. Upload file to Mistral
-        const uploadedFile = await mistralClient.files.upload({
+        uploadedFile = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `file-${fileId}.pdf`,
             // @ts-ignore
@@ -263,7 +266,7 @@ export async function POST(request: NextRequest) {
         console.log("Uploaded PDF file to Mistral:", uploadedFile.id);
         
         // 2. Get signed URL for the uploaded file
-        const signedUrl = await mistralClient.files.getSignedUrl({
+        signedUrl = await mistralClient.files.getSignedUrl({
           fileId: uploadedFile.id,
         });
         
@@ -394,7 +397,7 @@ export async function POST(request: NextRequest) {
         const processedBuffer = await compressImage(buffer, fileType);
         
         // 1. Upload image to Mistral
-        const uploadedImage = await mistralClient.files.upload({
+        uploadedImage = await mistralClient.files.upload({
           file: {
             fileName: file.originalName || `image-${fileId}.jpg`,
             // @ts-ignore
@@ -406,7 +409,7 @@ export async function POST(request: NextRequest) {
         console.log("Uploaded image file to Mistral:", uploadedImage.id);
         
         // 2. Get signed URL for the uploaded image
-        const signedUrl = await mistralClient.files.getSignedUrl({
+        signedUrl = await mistralClient.files.getSignedUrl({
           fileId: uploadedImage.id,
         });
         
@@ -554,6 +557,94 @@ export async function POST(request: NextRequest) {
     if (!textContent || textContent.trim() === '') {
       console.warn("No text content was extracted, using fallback placeholder");
       textContent = "⚠️ OCR processing completed, but no text could be extracted from this document.";
+    }
+
+    // Check if the textContent only contains markdown image references and not actual text
+    const markdownImagePattern = /^!\[.*?\]\(.*?\)$|^!\[.*?\]$/;
+    if (markdownImagePattern.test(textContent.trim())) {
+      console.warn("OCR returned only an image reference instead of extracted text:", textContent);
+      
+      // If the file is an image, try to process it again with more specific instructions
+      if (fileType.startsWith('image/')) {
+        console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
+        
+        try {
+          // Get the signed URL again if needed
+          let imageUrl = '';
+          if (fileType === 'application/pdf' || fileType.includes('pdf')) {
+            // For PDFs, we should have the signed URL from earlier
+            if (uploadedFile?.id) {
+              const pdfSignedUrl = await mistralClient.files.getSignedUrl({
+                fileId: uploadedFile.id,
+              });
+              imageUrl = pdfSignedUrl.url;
+            }
+          } else {
+            // For images, we should have the signed URL from earlier
+            if (uploadedImage?.id) {
+              const imageSignedUrl = await mistralClient.files.getSignedUrl({
+                fileId: uploadedImage.id,
+              });
+              imageUrl = imageSignedUrl.url;
+            }
+          }
+          
+          if (!imageUrl) {
+            console.warn("No image URL available for chat-based OCR extraction");
+            return;
+          }
+          
+          // Use the correct Mistral API chat method from SDK v1.5.1
+          const chatResponse = await mistralClient.chat.complete({
+            model: "mistral-medium",
+            messages: [
+              {
+                role: "system",
+                content: "You are an OCR assistant. Extract all visible text from the image. Return ONLY the extracted text, nothing else."
+              },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Extract all text from this image. Return ONLY the extracted text content, with no additional explanation or formatting."
+                  },
+                  {
+                    type: "image_url",
+                    imageUrl: imageUrl
+                  }
+                ]
+              }
+            ],
+            temperature: 0.1,
+            maxTokens: 4000
+          });
+          
+          if (chatResponse.choices && chatResponse.choices[0]?.message?.content) {
+            const extractedText = chatResponse.choices[0].message.content;
+            // Check if extractedText is a string before using trim()
+            const trimmedText = typeof extractedText === 'string' ? extractedText.trim() : 
+              (Array.isArray(extractedText) ? extractedText.join(' ').trim() : '');
+              
+            console.log("Successfully extracted text using chat API:", 
+              (typeof trimmedText === 'string' && trimmedText.length > 100) ? 
+                trimmedText.substring(0, 100) + "..." : trimmedText);
+            
+            // Only update if we got meaningful text back
+            if (trimmedText && trimmedText.length > 10 && !markdownImagePattern.test(trimmedText)) {
+              textContent = trimmedText;
+              
+              // Update tokens used
+              if (chatResponse.usage?.totalTokens) {
+                tokensUsed += chatResponse.usage.totalTokens;
+              }
+            }
+          }
+        } catch (chatError) {
+          console.error("Error using chat API for better text extraction:", chatError);
+          // Continue with original result if the chat API fails
+        }
+      }
     }
 
     // Update database with results

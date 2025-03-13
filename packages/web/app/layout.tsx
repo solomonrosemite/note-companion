@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PHProvider } from "./providers";
 import Logo from "@/components/ui/logo";
 import { Toaster } from "react-hot-toast";
+import { NavigationBar } from "@/components/navigation-bar";
 
 import "./globals.css";
 import Link from "next/link";
@@ -25,12 +26,13 @@ export default function RootLayout({
           <SignedIn>
             <body className="light">
               <Toaster />
-              <header className="p-4 border-b border-stone-300">
+              <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
                 <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
-                  <div className=" sm:block">
-                    <Link href="/">
+                  <div className="flex items-center space-x-6">
+                    <Link href="/" className="flex-shrink-0">
                       <Logo />
                     </Link>
+                    <NavigationBar />
                   </div>
                   <div className="flex items-center gap-2">
                     <ExtraUserSettings />

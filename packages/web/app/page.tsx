@@ -1,4 +1,3 @@
-
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getUserBillingCycle } from "./actions";
@@ -25,11 +24,14 @@ export default async function MainPage() {
   // top-up is not a "PAY ONCE" plan
   const isPayOnce = ["pay-once", "lifetime"].includes(billingCycle);
 
-  if (isSubscription) {
-    redirect("/dashboard/subscribers");
-  } else if (isPayOnce) {
-    redirect("/dashboard/lifetime");
+  // Check if the user has any kind of active subscription
+  const hasSubscription = isSubscription || isPayOnce;
+
+  if (hasSubscription) {
+    // If user has any kind of subscription, redirect to dashboard
+    redirect("/dashboard");
   } else {
-    redirect("/dashboard/onboarding");
+    // If user doesn't have a subscription, redirect to the new onboarding page
+    redirect("/onboarding");
   }
 }

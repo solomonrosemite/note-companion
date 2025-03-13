@@ -26,9 +26,9 @@ const LicenseForm = () => {
     setLoading(true);
     try {
       const res = await createLicenseKey();
-      // @ts-ignore
+      // @ts-expect-error - Response type is unknown at compile time
       if (res?.error) {
-        // @ts-ignore
+        // @ts-expect-error - Error field structure is unknown at compile time
         alert(res.error);
         return;
       }
@@ -61,7 +61,8 @@ const LicenseForm = () => {
               <Button
                 onClick={handleCreateKey}
                 disabled={loading}
-                className="w-full mt-4"
+                className="w-full mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+                variant="default"
               >
                 {loading ? "Generating Key..." : "Create Key"}
               </Button>
