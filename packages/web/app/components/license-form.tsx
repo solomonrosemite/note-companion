@@ -61,7 +61,7 @@ const LicenseForm = () => {
               <Button
                 onClick={handleCreateKey}
                 disabled={loading}
-                className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md py-5 text-base font-medium"
+                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white"
                 variant="default"
               >
                 {loading ? "Generating Key..." : "Create Key"}

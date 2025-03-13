@@ -38,7 +38,7 @@ export function NavigationBar() {
   const [mounted, setMounted] = React.useState(false);
   const [userSubscription, setUserSubscription] = React.useState({
     active: false,
-    type: null as string | null
+    currentProduct: null as string | null
   });
   
   // Use useEffect to handle client-side mounting
@@ -51,9 +51,8 @@ export function NavigationBar() {
         .then(res => res.json())
         .then(data => {
           setUserSubscription({
-            active: data.subscriptionStatus === 'active' && 
-                   (data.paymentStatus === 'paid' || data.paymentStatus === 'succeeded'),
-            type: data.currentProduct
+            active: data.active,
+            currentProduct: data.currentProduct
           });
         })
         .catch(err => {
@@ -82,7 +81,7 @@ export function NavigationBar() {
   // Only add conditional navigation items if we're mounted and user is loaded
   if (mounted && isLoaded && user) {
     // Conditional navigation items based on subscription type
-    if (userSubscription.type === 'lifetime') {
+    if (userSubscription.currentProduct === 'lifetime') {
       navigation.push({
         name: 'Self-Hosting',
         href: '/dashboard/lifetime',

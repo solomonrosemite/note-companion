@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { UserUsageTable, db } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { getUserSubscriptionStatus } from "@/lib/subscription";
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,31 +12,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    // Fetch the user subscription status from the database
-    const userUsage = await db
-      .select()
-      .from(UserUsageTable)
-      .where(eq(UserUsageTable.userId, userId))
-      .limit(1)
-      .execute();
-    
-    // If no user usage record found, return default values
-    if (!userUsage.length) {
-      return NextResponse.json({
-        subscriptionStatus: "inactive",
-        paymentStatus: "unpaid",
-        currentProduct: null,
-        billingCycle: "none"
-      });
-    }
+    // Get the user's subscription status using the shared function
+    const subscriptionStatus = await getUserSubscriptionStatus(userId);
     
     // Return the subscription data
-    return NextResponse.json({
-      subscriptionStatus: userUsage[0].subscriptionStatus,
-      paymentStatus: userUsage[0].paymentStatus,
-      currentProduct: userUsage[0].currentProduct,
-      billingCycle: userUsage[0].billingCycle
-    });
+    return NextResponse.json(subscriptionStatus);
     
   } catch (error) {
     console.error("Error fetching subscription status:", error);

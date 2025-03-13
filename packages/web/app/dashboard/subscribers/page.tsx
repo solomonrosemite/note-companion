@@ -1,6 +1,7 @@
 import { SubscribersDashboardClient } from "./client-component";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getUserSubscriptionStatus } from "@/lib/subscription";
 
 export default async function SubscribersDashboard() {
   if (process.env.ENABLE_USER_MANAGEMENT !== "true") {
@@ -19,13 +20,11 @@ export default async function SubscribersDashboard() {
     redirect("/signin");
   }
   
-  // Get user data from Clerk
-  const user = await fetch(`${process.env.NEXT_PUBLIC_CLERK_FRONTEND_API}/users/${userId}`)
-    .then(res => res.json())
-    .catch(() => null);
+  // Get user subscription status
+  const subscription = await getUserSubscriptionStatus(userId);
   
   // Check if user has an active subscription
-  if (!user?.subscription?.active) {
+  if (!subscription.active) {
     return (
       <div className="p-6 border border-stone-300 rounded-lg shadow-sm text-center text-xl bg-white">
         <h2 className="text-2xl font-bold text-slate-800 mb-4">Subscription Required</h2>
