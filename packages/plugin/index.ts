@@ -37,6 +37,7 @@ import { DashboardView, DASHBOARD_VIEW_TYPE } from "./views/assistant/dashboard/
 import Jimp from "jimp/es/index";
 
 import { FileOrganizerSettings, DEFAULT_SETTINGS } from "./settings";
+import { checkAndCreateFolders } from "./fileUtils";
 
 import { registerEventHandlers } from "./handlers/eventHandlers";
 import {
@@ -1170,5 +1171,33 @@ export default class FileOrganizer extends Plugin {
     return leaf.view as DashboardView;
   }
 
+  // Create all necessary folders for the plugin to function properly
+  public async checkAndCreateRequiredFolders(): Promise<void> {
+    try {
+      // Ensure all required folders exist
+      await checkAndCreateFolders(
+        this.app.vault, 
+        [
+          this.settings.pathToWatch,
+          this.settings.defaultDestinationPath,
+          this.settings.referencePath,
+          this.settings.attachmentsPath,
+          this.settings.logFolderPath,
+          this.settings.backupFolderPath,
+          this.settings.templatePaths,
+          this.settings.fabricPaths,
+          this.settings.bypassedFilePath,
+          this.settings.errorFilePath,
+          this.settings.syncFolderPath,
+        ]
+      );
+      
+      // Show success message
+      new Notice("All required folders have been created successfully!", 3000);
+    } catch (error) {
+      console.error("Failed to create required folders:", error);
+      new Notice("There was an error creating the required folders. Please check console for details.", 5000);
+    }
+  }
   
 }

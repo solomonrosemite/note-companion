@@ -8,8 +8,6 @@ import { AccountData } from './account-data';
 
 interface GeneralTabProps {
   plugin: FileOrganizer;
-  userId: string;
-  email: string;
 }
 
 interface UsageData {
