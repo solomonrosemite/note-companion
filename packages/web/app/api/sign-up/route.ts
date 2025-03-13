@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // Check if user already exists
-    const existingUsers = await clerkClient.users.getUserList({
+    // Check if user already exists - handle clerkClient as a function
+    const clerk = await clerkClient();
+    const existingUsers = await clerk.users.getUserList({
       emailAddress: [email],
     });
     
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Create the user in Clerk
-    const user = await clerkClient.users.createUser({
+    const user = await clerk.users.createUser({
       emailAddress: [email],
       password,
     });
