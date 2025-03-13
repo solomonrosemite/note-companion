@@ -193,7 +193,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
         <CardFooter>
           <Button
             className={twMerge(
-              "w-full py-6 text-base font-medium transition-all",
+              "w-full py-6 text-base font-medium transition-all cursor-pointer",
               !isSubscription
                 ? "bg-violet-600 hover:bg-violet-700 text-white border-none shadow-md hover:shadow-lg"
                 : "border-2 border-gray-300 hover:border-violet-400 hover:text-violet-700"

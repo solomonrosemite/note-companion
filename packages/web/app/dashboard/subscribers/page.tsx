@@ -1,64 +1,41 @@
-import { LicenseForm } from "@/app/components/license-form";
-import { Button } from "@/components/ui/button";
-import { ArrowDownIcon } from "@/components/ui/icons";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubscribersDashboardClient } from "./client-component";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function SubscribersDashboard() {
+export default async function SubscribersDashboard() {
   if (process.env.ENABLE_USER_MANAGEMENT !== "true") {
     return (
-      <div className="p-4 border border-stone-300 text-center text-xl">
+      <div className="p-6 border border-stone-300 rounded-lg shadow-sm text-center text-xl bg-white">
         User management is disabled
       </div>
     );
   }
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <main className="container mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold mb-8">
-          Welcome to Note Companion
-        </h1>
-
-        <div className="grid md:grid-cols-2 gap-12">
-          {/* Tutorial Card */}
-          <Card className="p-4 bg-transparent bg-center bg-cover">
-            <CardHeader>
-              <CardTitle className="text-center mb-3">How do I use the plugin?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video mb-4">
-                <iframe
-                  className="w-full h-full rounded-lg shadow-lg"
-                  src="https://www.youtube.com/embed/XZTpbECqZps?controls=1&modestbranding=1&showinfo=0"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* License Card */}
-          <Card className="p-4 bg-transparent bg-center bg-cover">
-            <CardContent>
-              <div className="mb-8">
-                <LicenseForm />
-              </div>
-
-              <div className="text-center">
-                <ArrowDownIcon className="mx-auto h-12 w-12" />
-                <p className="text-2xl font-bold mt-2 mb-4">
-                  Get the plugin
-                </p>
-                <a href="obsidian://show-plugin?id=fileorganizer2000">
-                  <Button className="w-full" variant="default">
-                    Download
-                  </Button>
-                </a>
-                <p className="mt-3 text-sm text-muted-foreground">Requires Obsidian app.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
-  );
+  
+  // Server-side authentication check
+  const { userId } = await auth();
+  
+  // If no user is logged in, redirect to login
+  if (!userId) {
+    redirect("/signin");
+  }
+  
+  // Get user data from Clerk
+  const user = await fetch(`${process.env.NEXT_PUBLIC_CLERK_FRONTEND_API}/users/${userId}`)
+    .then(res => res.json())
+    .catch(() => null);
+  
+  // Check if user has an active subscription
+  if (!user?.subscription?.active) {
+    return (
+      <div className="p-6 border border-stone-300 rounded-lg shadow-sm text-center text-xl bg-white">
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">Subscription Required</h2>
+        <p className="text-slate-600 mb-6">You need an active subscription to access API Keys.</p>
+        <a href="/dashboard/pricing" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md">
+          View Pricing
+        </a>
+      </div>
+    );
+  }
+  
+  return <SubscribersDashboardClient />;
 }

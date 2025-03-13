@@ -26,7 +26,7 @@ export default function RootLayout({
           <SignedIn>
             <body className="light">
               <Toaster />
-              <header className="p-4 border-b border-stone-300 bg-white sticky top-0 z-50 shadow-sm">
+              <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
                 <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
                   <div className="flex items-center space-x-6">
                     <Link href="/" className="flex-shrink-0">

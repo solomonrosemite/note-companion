@@ -4,38 +4,36 @@ import { FileText, Zap, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PricingCards } from "@/components/pricing-cards";
-import { useRouter } from "next/navigation";
 
 const FEATURES = [
   {
     icon: <FileText className="h-6 w-6" />,
     title: "Smart File Organization",
     description: "AI-powered sorting and categorization",
+    color: "from-blue-500 to-cyan-400",
+    bgLight: "bg-blue-50",
   },
   {
     icon: <Zap className="h-6 w-6" />,
     title: "Chat with your files",
     description: "Ask questions about your files and get instant answers",
+    color: "from-amber-500 to-orange-400",
+    bgLight: "bg-amber-50",
   },
   {
     icon: <Check className="h-6 w-6" />,
     title: "Image digitization & Audio Transcription",
     description:
       "Convert your hand-written notes and audio notes to text by simply dropping them into your Obsidian vault",
+    color: "from-green-500 to-emerald-400",
+    bgLight: "bg-green-50",
   },
 ];
 
 export default function OnboardingPage() {
-  const router = useRouter();
-
-  // Function to handle subscription completion
-  const handleSubscriptionComplete = (type: 'lifetime' | 'cloud') => {
-    if (type === 'lifetime') {
-      router.push('/dashboard/lifetime');
-    } else {
-      router.push('/dashboard/api-key');
-    }
-  };
+  // We no longer need to manually redirect after subscription in this page
+  // The PricingCards component will handle redirecting to the checkout URLs
+  // Upon successful payment, the user will be redirected to the appropriate dashboard page
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
@@ -62,16 +60,24 @@ export default function OnboardingPage() {
               {/* Features section */}
               <div className="space-y-6">
                 <h2 className="text-2xl font-semibold">Key Features</h2>
-                <div className="grid gap-4">
+                <div className="grid gap-6">
                   {FEATURES.map((feature, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="flex items-start">
-                        <div className="shrink-0 mr-4 rounded-full p-2 bg-violet-100">
-                          {feature.icon}
+                    <Card 
+                      key={index} 
+                      className="p-6 border-0 shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] overflow-hidden relative group bg-white rounded-md"
+                    >
+                      {/* Gradient background that shows on hover */}
+                      <div className={`absolute inset-0 opacity-0 bg-gradient-to-r ${feature.color} group-hover:opacity-5 transition-opacity duration-300`}></div>
+                      
+                      <div className="flex items-start relative z-10">
+                        <div className={`shrink-0 mr-5 rounded-lg p-3 ${feature.bgLight} bg-opacity-80 transition-all duration-300 group-hover:scale-110`}>
+                          <div className={`text-gradient bg-gradient-to-br ${feature.color}`}>
+                            {feature.icon}
+                          </div>
                         </div>
                         <div>
-                          <h3 className="font-medium text-lg">{feature.title}</h3>
-                          <p className="text-muted-foreground">{feature.description}</p>
+                          <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
+                          <p className="text-gray-600">{feature.description}</p>
                         </div>
                       </div>
                     </Card>
@@ -111,7 +117,7 @@ export default function OnboardingPage() {
                 </ul>
               </div>
             </div>
-            <PricingCards onSubscriptionComplete={handleSubscriptionComplete} />
+            <PricingCards />
           </div>
         </div>
       </main>

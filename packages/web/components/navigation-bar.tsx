@@ -3,17 +3,17 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { 
   Home, 
   Cloud, 
   CreditCard, 
+  Server, 
+  Key, 
   Settings, 
   LifeBuoy, 
-  ChevronDown,
-  Key,
-  Server
+  ChevronDown
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,28 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
+import { useUser } from "@clerk/nextjs";
 
-// Added profile type
-type UserProfile = {
-  subscription?: {
-    type: 'lifetime' | 'cloud' | null;
-    active: boolean;
-  };
-};
-
-// Auth context for subscription info
-const AuthContext = React.createContext<{
-  user: UserProfile | null;
-  loading: boolean;
-}>({
-  user: null,
-  loading: true,
-});
-
-// Custom hook to easily access auth context
-export const useAuth = () => React.useContext(AuthContext);
-
-interface NavigationItem {
+export interface NavigationItem {
   name: string;
   href: string;
   icon: React.ReactNode;
@@ -53,17 +34,33 @@ interface NavigationItem {
 
 export function NavigationBar() {
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
+  const [mounted, setMounted] = React.useState(false);
+  const [userSubscription, setUserSubscription] = React.useState({
+    active: false,
+    type: null as string | null
+  });
   
-  // In a real app, this would come from your auth context
-  // Simulating auth context for demo purposes
-  const { user } = useAuth?.() || { 
-    user: {
-      subscription: {
-        type: pathname?.includes('/dashboard/lifetime') ? 'lifetime' : 'cloud',
-        active: true
-      }
+  // Use useEffect to handle client-side mounting
+  React.useEffect(() => {
+    setMounted(true);
+    
+    // Fetch subscription status from the server if user is loaded
+    if (isLoaded && user) {
+      fetch('/api/user/subscription-status')
+        .then(res => res.json())
+        .then(data => {
+          setUserSubscription({
+            active: data.subscriptionStatus === 'active' && 
+                   (data.paymentStatus === 'paid' || data.paymentStatus === 'succeeded'),
+            type: data.currentProduct
+          });
+        })
+        .catch(err => {
+          console.error('Error fetching subscription status:', err);
+        });
     }
-  };
+  }, [isLoaded, user]);
   
   // Base navigation items always shown
   const navigation: NavigationItem[] = [
@@ -82,25 +79,29 @@ export function NavigationBar() {
     },
   ];
   
-  // Conditional navigation items based on subscription type
-  if (user?.subscription?.type === 'lifetime') {
-    navigation.push({
-      name: 'Self-Hosting',
-      href: '/dashboard/lifetime',
-      icon: <Server className="h-5 w-5" />,
-      current: pathname?.includes('/dashboard/lifetime'),
-      requiresSubscription: 'lifetime'
-    });
-  }
-  
-  if (user?.subscription?.type === 'cloud') {
-    navigation.push({
-      name: 'API Key',
-      href: '/dashboard/api-key',
-      icon: <Key className="h-5 w-5" />,
-      current: pathname?.includes('/dashboard/api-key'),
-      requiresSubscription: 'cloud'
-    });
+  // Only add conditional navigation items if we're mounted and user is loaded
+  if (mounted && isLoaded && user) {
+    // Conditional navigation items based on subscription type
+    if (userSubscription.type === 'lifetime') {
+      navigation.push({
+        name: 'Self-Hosting',
+        href: '/dashboard/lifetime',
+        icon: <Server className="h-5 w-5" />,
+        current: pathname?.includes('/dashboard/lifetime'),
+        requiresSubscription: 'lifetime'
+      });
+    }
+    
+    // Add API Keys for any subscriber (lifetime or cloud)
+    if (userSubscription.active) {
+      navigation.push({
+        name: 'API Keys',
+        href: '/dashboard/subscribers',
+        icon: <Key className="h-5 w-5" />,
+        current: pathname?.includes('/dashboard/subscribers'),
+        requiresSubscription: true
+      });
+    }
   }
   
   // Settings and help are always shown at the end

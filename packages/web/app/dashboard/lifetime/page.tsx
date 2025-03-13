@@ -1,5 +1,7 @@
-"use client";
-
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { UserUsageTable, db } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AutomatedSetup } from "./automated-setup";
 import { LegacySetup } from "./legacy-setup";
@@ -8,7 +10,44 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 
-export default function LifetimeAccessPage() {
+export default async function LifetimeAccessPage() {
+  // Server-side authentication check
+  const { userId } = await auth();
+  
+  // If no user is logged in, redirect to login
+  if (!userId) {
+    redirect("/signin");
+  }
+  
+  // Get user subscription from database
+  const userUsage = await db
+    .select()
+    .from(UserUsageTable)
+    .where(eq(UserUsageTable.userId, userId))
+    .limit(1)
+    .execute();
+    
+  // Check if user has a lifetime subscription
+  const hasLifetimeAccess = userUsage.length > 0 && 
+                           userUsage[0].currentProduct === "lifetime" &&
+                           userUsage[0].subscriptionStatus === "active";
+  
+  // If user doesn't have lifetime access, show error message
+  if (!hasLifetimeAccess) {
+    return (
+      <div className="container max-w-4xl mx-auto p-6 space-y-8">
+        <div className="p-6 border border-stone-300 rounded-lg shadow-sm text-center text-xl bg-white">
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">Lifetime Access Required</h2>
+          <p className="text-slate-600 mb-6">You need a lifetime subscription to access self-hosting features.</p>
+          <a href="/dashboard/pricing" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md">
+            View Pricing
+          </a>
+        </div>
+      </div>
+    );
+  }
+  
+  // User has lifetime access, render the client component
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-8">
       <div className="space-y-2">
