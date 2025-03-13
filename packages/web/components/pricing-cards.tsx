@@ -221,7 +221,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="mx-auto">
       <div className="flex flex-col md:flex-row gap-8">
         {renderPlanCard("subscription")}
         {renderPlanCard("lifetime")}

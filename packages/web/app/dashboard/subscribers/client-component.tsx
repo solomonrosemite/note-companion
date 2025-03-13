@@ -2,219 +2,155 @@
 
 import { LicenseForm } from "@/app/components/license-form";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { SVGProps } from "react";
-
-// Custom icon components
-const PlayCircleIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polygon points="10 8 16 12 10 16 10 8" />
-  </svg>
-);
-
-const DownloadIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
-const CheckCircleIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
+import { CheckCircleIcon, DownloadIcon } from "lucide-react";
 
 export function SubscribersDashboardClient() {
   return (
-    <div className="">
-      {/* Hero Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-       
-
-        <div className="relative max-w-6xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-           <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Welcome to Note Companion
-            </h1>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-8">
-              Organize and manage your notes with powerful tools designed for
-              productivity and seamless integration.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Content Section */}
-      <main className="container mx-auto px-4 pb-20 -mt-6">
-        <motion.div
-          className="grid md:grid-cols-2 gap-8 lg:gap-12"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          {/* Tutorial Card */}
-          <Card className="overflow-hidden border-0 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-4">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                How to Use Note Companion
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                Watch our comprehensive tutorial video
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="aspect-video mb-6 rounded-lg overflow-hidden shadow-md group relative">
-                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                  <PlayCircleIcon className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-transform" />
-                </div>
-                <iframe
-                  className="w-full h-full"
-                  src="https://www.youtube.com/embed/XZTpbECqZps?controls=1&modestbranding=1&showinfo=0"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
-                  <p className="text-slate-700">
-                    Learn how to organize your notes efficiently
-                  </p>
-                </div>
-                <div className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
-                  <p className="text-slate-700">
-                    Discover powerful automation features
-                  </p>
-                </div>
-                <div className="flex items-start">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
-                  <p className="text-slate-700">
-                    Set up custom workflows for productivity
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* License Card */}
-          <Card className="overflow-hidden border-0 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 pb-4">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Activate Your License
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                Enter your license key to unlock all features
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="mb-8">
-                <LicenseForm />
-              </div>
-
-              <div className="text-center space-y-4">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-white px-4 text-sm text-slate-500">
-                      Get Started
-                    </span>
-                  </div>
-                </div>
-
-                <a
-                  href="obsidian://show-plugin?id=fileorganizer2000"
-                  className="block"
-                >
-                  <div className="flex items-center justify-center">
-                    <DownloadIcon className="h-6 w-6 text-indigo-600 mr-2" />
-                    <p className="text-xl font-semibold text-slate-800">
-                      Download the Plugin
-                    </p>
-                  </div>
-                </a>
-                <p className="mt-3 text-sm text-slate-500">
-                  Requires Obsidian app. Available for all platforms.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Additional Resources Section */}
-        <div className="mt-16 text-center">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Need Help?</h2>
-          <p className="text-slate-600 mb-6">
-            Visit our documentation or join our community for support
+    <div className="container max-w-6xl mx-auto p-6">
+      {/* Header Section */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <header>
+          <div className="flex items-center">
+            <DownloadIcon className="h-6 w-6 mr-2 text-blue-600" />
+            <h1 className="text-2xl font-bold">Note Companion</h1>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            Organize and manage your notes with powerful tools
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button
-              variant="default"
-              className="min-w-[160px] bg-blue-600 hover:bg-blue-700"
-            >
-              Documentation
-            </Button>
-            <Button
-              variant="default"
-              className="min-w-[160px] bg-indigo-600 hover:bg-indigo-700"
-            >
-              Community Forum
-            </Button>
-            <Button
-              variant="default"
-              className="min-w-[160px] bg-purple-600 hover:bg-purple-700"
-            >
-              Support
-            </Button>
+        </header>
+        
+        <div className="flex flex-wrap gap-4 bg-slate-50 p-3 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-100 p-2 rounded-full">
+              <CheckCircleIcon className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Organize</p>
+              <p className="text-xs text-muted-foreground">Smart sorting</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="bg-amber-100 p-2 rounded-full">
+              <DownloadIcon className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Easy Setup</p>
+              <p className="text-xs text-muted-foreground">Quick install</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-100 p-2 rounded-full">
+              <CheckCircleIcon className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Productivity</p>
+              <p className="text-xs text-muted-foreground">Custom workflows</p>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Content Section */}
+      <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+        {/* Tutorial Card */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-slate-800">How to Use Note Companion</h2>
+            <p className="text-muted-foreground">Watch our comprehensive tutorial video</p>
+          </div>
+          
+          <div className="aspect-video mb-6 rounded-lg overflow-hidden shadow-md">
+            <iframe
+              src="https://www.youtube.com/embed/XZTpbECqZps"
+              title="Note Companion Tutorial"
+              className="w-full h-full"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-start">
+              <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
+              <p className="text-slate-700">
+                Learn how to organize your notes efficiently
+              </p>
+            </div>
+            <div className="flex items-start">
+              <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
+              <p className="text-slate-700">
+                Discover powerful automation features
+              </p>
+            </div>
+            <div className="flex items-start">
+              <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
+              <p className="text-slate-700">
+                Set up custom workflows for productivity
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* License Card */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-slate-800">Activate Your License</h2>
+            <p className="text-muted-foreground">Enter your license key to unlock all features</p>
+          </div>
+          
+          <div className="mb-8">
+            <LicenseForm />
+            
+            <div className="relative flex py-5 items-center">
+              <div className="flex-grow">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-4 text-sm text-slate-500">
+                  Get Started
+                </span>
+              </div>
+            </div>
+
+            <a
+              href="obsidian://show-plugin?id=fileorganizer2000"
+              className="block mb-4"
+            >
+              <Button 
+                className="w-full py-2 text-base font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                variant="default"
+              >
+                <DownloadIcon className="h-5 w-5 mr-2" />
+                Install in Obsidian
+              </Button>
+            </a>
+            <p className="text-sm text-slate-500 text-center">
+              Requires Obsidian app. Available for all platforms.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Resources Section */}
+      <div className="mt-12 bg-white rounded-xl shadow-sm border p-6">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Need Help?</h2>
+        <p className="text-slate-600 mb-6">
+          Join our Discord community for support and discussions
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a href="https://discord.gg/udQnCRFyus" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="default"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              Join Discord
+            </Button>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
