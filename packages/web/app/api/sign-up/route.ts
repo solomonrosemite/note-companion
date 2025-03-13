@@ -6,7 +6,8 @@ import { createEmptyUserUsage } from "@/drizzle/schema";
 export async function POST(req: NextRequest) {
   try {
     // For development mode, we'll use the current auth session if available
-    const { userId } = auth();
+    const authResult = await auth();
+    const userId = authResult.userId;
     
     // If we're in development mode and have a userId, use it
     if (process.env.NODE_ENV === 'development' && userId) {
