@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, uploadedFiles } from '@/drizzle/schema';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
+import { handleAuthorizationV2 } from '@/lib/handleAuthorization';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // Query the database for the most recent files
+    // Get the current user ID from authentication
+    const { userId } = await handleAuthorizationV2(req);
+    
+    // Query the database for the most recent files belonging to the current user
     const recentFiles = await db
       .select({
         id: uploadedFiles.id,
@@ -14,6 +18,7 @@ export async function GET() {
         path: uploadedFiles.blobUrl,
       })
       .from(uploadedFiles)
+      .where(eq(uploadedFiles.userId, userId)) // Filter by the current user ID
       .orderBy(desc(uploadedFiles.updatedAt))
       .limit(10); // Get the 10 most recent files
     
