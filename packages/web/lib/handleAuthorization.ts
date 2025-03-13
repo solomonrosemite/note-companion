@@ -1,4 +1,4 @@
-import { clerkClient, auth } from "@clerk/nextjs/server";
+import {  clerkClient } from "@clerk/nextjs/server";
 import { verifyKey } from "@unkey/api";
 import { NextRequest } from "next/server";
 import { checkTokenUsage } from "../drizzle/schema";
@@ -67,44 +67,23 @@ export const getToken = (req: NextRequest) => {
 
 export async function handleAuthorizationV2(req: NextRequest) {
   // this is to allow people to self host it easily without
+
   // setting up clerk
   if (process.env.ENABLE_USER_MANAGEMENT !== "true") {
     return { userId: "user", isCustomer: true };
   }
+  // check if clerk
 
-  // First, try API key authentication
   const token = getToken(req);
-  if (token) {
-    try {
-      const { result, error } = await verifyKey(token);
-      if (result.valid) {
-        // API key is valid
-        console.log("API key authentication successful");
-        // Might require await
-        handleLoggingV2(req, result.ownerId);
-        return { userId: result.ownerId };
-      }
-    } catch (error) {
-      console.error("API key validation error:", error);
-      // Continue to try Clerk authentication if API key validation fails
-    }
+  const { result, error } = await verifyKey(token);
+  if (!result.valid) {
+    console.error(result);
+    throw new AuthorizationError(`Unauthorized: ${result.code}`, 401);
   }
-
-  // If API key authentication failed or wasn't provided, try Clerk authentication
-  try {
-    const { userId } = await auth();
-    if (userId) {
-      console.log("Clerk authentication successful");
-      handleLoggingV2(req, userId);
-      return { userId };
-    }
-  } catch (error) {
-    console.error("Clerk authentication error:", error);
-    // Authentication failed, will throw below
-  }
-
-  // If we reach here, both authentication methods failed
-  throw new AuthorizationError("Unauthorized", 401);
+  console.log(result)
+  // might require await
+  handleLoggingV2(req, result.ownerId);
+  return { userId: result.ownerId };
 }
 
 /**

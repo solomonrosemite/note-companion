@@ -33,6 +33,11 @@ module.exports = {
           foreground: "var(--text-on-accent)",
         },
       },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
     },
   },
   plugins: [],
