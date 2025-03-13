@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, uploadedFiles } from '@/drizzle/schema';
 import { desc } from 'drizzle-orm';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Query the database for the most recent files
     const recentFiles = await db
