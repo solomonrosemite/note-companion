@@ -99,33 +99,7 @@ export default function RootLayout({
                 </div>
                 <div className="flex flex-col p-5 pb-20 w-full">{children}</div>
 
-                <footer className="w-full flex flex-col items-center justify-center border-t border-gray-700 mx-auto text-center text-xs gap-8 py-8">
-                  <p className="text-sm text-gray-900">
-                    Different AI Inc - Privacy-first AI solutions
-                  </p>
-                  <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-3xl text-center">
-                    <p className="text-sm text-gray-700">
-                      <strong>Want to shape Note Companion's future?</strong>{" "}
-                      <a
-                        href="https://t.me/notecompanion"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        Join our Telegram
-                      </a>
-                      {" "}or{" "}
-                      <a
-                        href="https://x.com/notecompanion"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        follow on Twitter
-                      </a>
-                    </p>
-                  </div>
-                </footer>
+               
               </div>
             </main>
             <Toaster />
