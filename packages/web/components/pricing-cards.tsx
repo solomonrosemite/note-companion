@@ -92,7 +92,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
       <Card
         className={twMerge(
           "p-6 rounded-xl flex-1 relative shadow-md transition-all hover:shadow-lg bg-white",
-          !isSubscription && "border-violet-500 border-2"
+          isSubscription && "border-violet-500 border-2"
         )}
       >
         {isSubscription ? (
@@ -194,11 +194,11 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
           <Button
             className={twMerge(
               "w-full py-6 text-base font-medium transition-all cursor-pointer",
-              !isSubscription
+              isSubscription
                 ? "bg-violet-600 hover:bg-violet-700 text-white border-none shadow-md hover:shadow-lg"
                 : "border-2 border-gray-300 hover:border-violet-400 hover:text-violet-700"
             )}
-            variant={isSubscription ? "outline" : "default"}
+            variant={isSubscription ? "default" : "outline"}
             onClick={() =>
               handlePlanSelection(
                 isSubscription
