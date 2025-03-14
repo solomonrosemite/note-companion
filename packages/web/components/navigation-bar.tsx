@@ -120,8 +120,8 @@ export function NavigationBar() {
   );
 
   return (
-    <div className="w-full">
-      <div className="max-w-6xl mx-auto flex items-center space-x-2">
+    <nav className="w-full bg-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-1">
           {navigation.map((item) => (
@@ -179,6 +179,6 @@ export function NavigationBar() {
           </DropdownMenu>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
