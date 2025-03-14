@@ -140,7 +140,7 @@ export function PricingCards() {
               ))}
             </div>
           </div>
-          <Link href="https://app.notecompanion.ai" passHref>
+          <Link href="https://accounts.notecompanion.ai/sign-up" passHref>
             <Button className="w-full bg-primary hover:bg-primary/90 text-white">
               Start Free Trial
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -167,7 +167,7 @@ export function PricingCards() {
               ))}
             </div>
           </div>
-          <Link href="https://app.notecompanion.ai" passHref>
+          <Link href="https://accounts.notecompanion.ai/sign-up" passHref>
             <Button variant="outline" className="w-full">
               Get Lifetime Access
             </Button>

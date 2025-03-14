@@ -84,7 +84,7 @@ export default function RootLayout({
                           <Star className="h-4 w-4" />
                           <span>530</span>
                         </a>
-                        <Link href="https://app.notecompanion.ai">
+                        <Link href="https://accounts.notecompanion.ai/sign-up">
                           <Button
                             variant="default"
                             size="sm"
