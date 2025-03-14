@@ -381,12 +381,11 @@ export default function Page() {
             Messy vault?
             </h2>
             <p className="text-lg text-muted-foreground mb-10">
-              Get Note Companion and enjoy a 7-day free trial. Bring order to your Obsidian vault. Stop wrestling with messy notes and let AI handle the tedious tasks—so you can focus on what really matters.
-            </p>
+            Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.            </p>
             <div className="flex items-center justify-center gap-x-6">
               <a href="https://accounts.notecompanion.ai/sign-up">
                 <Button size="lg" className="text-white bg-primary hover:bg-primary/90">
-                  Start Free Trial
+                  Start a 7-Day Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </a>
