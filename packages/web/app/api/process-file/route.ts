@@ -7,6 +7,7 @@ import { incrementAndLogTokenUsage } from "@/lib/incrementAndLogTokenUsage";
 import { auth } from "@clerk/nextjs/server";
 import sharp from 'sharp';
 import { FilePurpose } from "@mistralai/mistralai/models/components";
+import OpenAI from "openai";
 
 export const maxDuration = 60; // 1 minute (maximum allowed for hobby plan)
 
@@ -73,6 +74,43 @@ async function compressImage(buffer: Buffer, fileType: string): Promise<Buffer> 
   } catch (error) {
     console.error('Image compression error:', error);
     return buffer; // Return original buffer if compression fails
+  }
+}
+
+// Function to extract text from images using GPT-4o when Mistral fails
+async function extractTextWithGPT4o(imageUrl: string): Promise<string> {
+  console.log("Falling back to GPT-4o for image text extraction");
+  
+  try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an OCR assistant. Extract all text from the provided image. If there are any diagrams or visual elements, describe them briefly."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract all text visible in this image and provide it in a clean, structured format." },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ]
+        }
+      ],
+      max_tokens: 1500,
+    });
+    
+    const extractedText = response.choices[0]?.message?.content || "No text extracted";
+    console.log("GPT-4o extraction successful, text length:", extractedText.length);
+    
+    return extractedText;
+  } catch (error) {
+    console.error("Error with GPT-4o text extraction:", error);
+    return "Error extracting text from image with GPT-4o";
   }
 }
 
@@ -505,110 +543,156 @@ export async function POST(request: NextRequest) {
         console.log("Got signed URL for image:", signedUrl.url.substring(0, 50) + "...");
         
         // 3. Process the image with OCR
-        const ocrResponse = await mistralClient.ocr.process({
-          model: "mistral-ocr-latest",
-          document: {
-            type: "image_url",
-            imageUrl: signedUrl.url,
-          }
-        }) as MistralOCRResponse;
-        
-        console.log("OCR processing complete, extracting text content");
-        console.log("OCR response structure:", JSON.stringify(ocrResponse, null, 2).substring(0, 500) + "...");
-        
-        // 4. Extract text from OCR response with improved handling
-        if (ocrResponse) {
-          // Try to extract from different possible response structures
-          if (ocrResponse.pages && Array.isArray(ocrResponse.pages)) {
-            console.log(`Found ${ocrResponse.pages.length} pages in OCR response`);
-            
-            textContent = ocrResponse.pages.map((page, index) => {
-              console.log(`Processing page ${index + 1}, type: ${typeof page}`);
+        try {
+          const ocrResponse = await mistralClient.ocr.process({
+            model: "mistral-ocr-latest",
+            document: {
+              type: "image_url",
+              imageUrl: signedUrl.url,
+            }
+          }) as MistralOCRResponse;
+          
+          console.log("OCR processing complete, extracting text content");
+          console.log("OCR response structure:", JSON.stringify(ocrResponse, null, 2).substring(0, 500) + "...");
+          
+          // 4. Extract text from OCR response with improved handling
+          if (ocrResponse) {
+            // Try to extract from different possible response structures
+            if (ocrResponse.pages && Array.isArray(ocrResponse.pages)) {
+              console.log(`Found ${ocrResponse.pages.length} pages in OCR response`);
               
-              if (typeof page === 'string') {
-                return page;
-              } else if (typeof page === 'object' && page !== null) {
-                // Log available properties on this page object
-                console.log(`Page ${index + 1} properties:`, Object.keys(page));
+              textContent = ocrResponse.pages.map((page, index) => {
+                console.log(`Processing page ${index + 1}, type: ${typeof page}`);
                 
-                // Check for different property names that might contain text
-                if (page.text) return page.text;
-                if (page.content) return page.content;
-                if (page.markdown) return page.markdown;
+                if (typeof page === 'string') {
+                  return page;
+                } else if (typeof page === 'object' && page !== null) {
+                  // Log available properties on this page object
+                  console.log(`Page ${index + 1} properties:`, Object.keys(page));
+                  
+                  // Check for different property names that might contain text
+                  if (page.text) return page.text;
+                  if (page.content) return page.content;
+                  if (page.markdown) return page.markdown;
+                  
+                  // Try to stringify the entire object if we couldn't find specific text properties
+                  try {
+                    return JSON.stringify(page);
+                  } catch (e) {
+                    console.error(`Error stringifying page ${index + 1}:`, e);
+                    return '';
+                  }
+                }
+                return '';
+              }).join("\n\n");
+              
+              console.log(`Extracted ${textContent.length} characters of text content`);
+              
+              // Check if we only got image references instead of actual text
+              if (textContent.trim().startsWith("![") && textContent.includes("](")) {
+                console.log("OCR returned only an image reference instead of extracted text:", textContent);
                 
-                // Try to stringify the entire object if we couldn't find specific text properties
+                // Fallback to GPT-4o for image processing
+                console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
+                
                 try {
-                  return JSON.stringify(page);
-                } catch (e) {
-                  console.error(`Error stringifying page ${index + 1}:`, e);
-                  return '';
+                  // Use GPT-4o to extract text from the image
+                  textContent = await extractTextWithGPT4o(signedUrl.url);
+                } catch (gptError) {
+                  console.error("GPT-4o fallback also failed:", gptError);
+                  // Keep whatever text we had, even if it's just image references
                 }
               }
-              return '';
-            }).join("\n\n");
-            
-            console.log(`Extracted ${textContent.length} characters of text content`);
-            
-            // Fallback if text is still empty
-            if (!textContent.trim()) {
-              console.log("No text extracted from pages array. Trying alternate approaches.");
               
-              // Check if there's a simpler text property directly on the response
+              // Fallback if text is still empty
+              if (!textContent.trim()) {
+                console.log("No text extracted from pages array. Trying alternate approaches.");
+                
+                // Check if there's a simpler text property directly on the response
+                if (ocrResponse.text) {
+                  textContent = ocrResponse.text;
+                  console.log("Found text directly on OCR response");
+                } else if (typeof ocrResponse === 'string') {
+                  textContent = ocrResponse;
+                  console.log("OCR response is a string, using directly");
+                } else {
+                  // Last resort: stringify the response object, but clean up to extract only text
+                  try {
+                    const fullResponseString = JSON.stringify(ocrResponse);
+                    console.log("Using full response string as fallback");
+                    textContent = fullResponseString;
+                  } catch (e) {
+                    console.error("Error converting OCR response to string:", e);
+                  }
+                }
+              }
+            } else {
+              console.log("OCR response does not have a pages array, structure:", 
+                          typeof ocrResponse, 
+                          Object.keys(ocrResponse));
+              
+              // Try to extract text from other potential response formats
               if (ocrResponse.text) {
                 textContent = ocrResponse.text;
-                console.log("Found text directly on OCR response");
-              } else if (typeof ocrResponse === 'string') {
-                textContent = ocrResponse;
-                console.log("OCR response is a string, using directly");
+              } else if (ocrResponse.content) {
+                textContent = ocrResponse.content;
+              } else if (ocrResponse.markdown) {
+                textContent = ocrResponse.markdown;
               } else {
-                // Last resort: stringify the response object, but clean up to extract only text
+                // Try to stringify response for inspection
                 try {
-                  const fullResponseString = JSON.stringify(ocrResponse);
-                  console.log("Using full response string as fallback");
-                  textContent = fullResponseString;
+                  textContent = JSON.stringify(ocrResponse);
+                  console.log("Using stringified response:", textContent.substring(0, 100) + "...");
                 } catch (e) {
-                  console.error("Error converting OCR response to string:", e);
+                  console.error("Error stringifying OCR response:", e);
+                  textContent = "Error extracting text from OCR response";
                 }
               }
             }
           } else {
-            console.log("OCR response does not have a pages array, structure:", 
-                        typeof ocrResponse, 
-                        Object.keys(ocrResponse));
-            
-            // Try to extract text from other potential response formats
-            if (ocrResponse.text) {
-              textContent = ocrResponse.text;
-            } else if (ocrResponse.content) {
-              textContent = ocrResponse.content;
-            } else if (ocrResponse.markdown) {
-              textContent = ocrResponse.markdown;
-            } else {
-              // Try to stringify response for inspection
-              try {
-                textContent = JSON.stringify(ocrResponse);
-                console.log("Using stringified response:", textContent.substring(0, 100) + "...");
-              } catch (e) {
-                console.error("Error stringifying OCR response:", e);
-                textContent = "Error extracting text from OCR response";
-              }
+            console.error("OCR response is null or undefined");
+            textContent = "Error: Could not obtain OCR response";
+          }
+          
+          // 5. Extract token usage information
+          if (ocrResponse?.usageInfo) {
+            if (ocrResponse.usageInfo.totalTokens) {
+              tokensUsed = ocrResponse.usageInfo.totalTokens;
+            } else if (ocrResponse.usageInfo.total_tokens) {
+              tokensUsed = ocrResponse.usageInfo.total_tokens;
             }
+            console.log("Token usage:", tokensUsed);
+          } else {
+            console.log("No usage info available in OCR response");
           }
-        } else {
-          console.error("OCR response is null or undefined");
-          textContent = "Error: Could not obtain OCR response";
-        }
-        
-        // 5. Extract token usage information
-        if (ocrResponse?.usageInfo) {
-          if (ocrResponse.usageInfo.totalTokens) {
-            tokensUsed = ocrResponse.usageInfo.totalTokens;
-          } else if (ocrResponse.usageInfo.total_tokens) {
-            tokensUsed = ocrResponse.usageInfo.total_tokens;
+        } catch (ocrError: unknown) {
+          console.error("OCR processing error:", ocrError);
+          
+          // Check if the error is related to vision capabilities
+          const errorMessage = typeof ocrError === 'object' && ocrError !== null && 'message' in ocrError 
+            ? String(ocrError.message) 
+            : String(ocrError);
+            
+          if (
+            errorMessage.includes("vision") || 
+            errorMessage.includes("does not have the 'vision' capability") ||
+            errorMessage.includes("image")
+          ) {
+            console.log("Mistral OCR failed due to vision capability limitations, falling back to GPT-4o");
+            
+            try {
+              // Use GPT-4o to extract text from the image
+              textContent = await extractTextWithGPT4o(signedUrl.url);
+            } catch (gptError) {
+              console.error("GPT-4o fallback also failed:", gptError);
+              textContent = "Error extracting text from image. Both OCR services failed.";
+            }
+          } else {
+            textContent = `Error processing image with OCR: ${errorMessage}`;
           }
-          console.log("Token usage:", tokensUsed);
-        } else {
-          console.log("No usage info available in OCR response");
+          
+          // Set a default token usage since we don't have actual usage data
+          tokensUsed = 0;
         }
         
         // Optional: Delete the uploaded file to clean up

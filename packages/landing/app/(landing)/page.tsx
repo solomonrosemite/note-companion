@@ -43,49 +43,45 @@ export default function Page() {
       <div className="w-full max-w-5xl px-6 py-12 sm:py-12 lg:px-8 text-center bg-transparent">
         <div className="mx-auto max-w-2xl">
           <div className="mb-8">
-            {/* <Image
+            <Image
               src="https://framerusercontent.com/images/SqHU6Ili7ACWk8dhvEPmdfXEPDA.png"
               alt="File Organizer Logo"
               width={64}
               height={64}
               className="mx-auto"
-            /> */}
-            <div className="flex justify-center">
-              <div className="grid grid-cols-3 gap-0.5">
-                <div className="w-3 h-3"></div>
-                <div className="w-3 h-3 bg-gray-700"></div>
-                <div className="w-3 h-3"></div>
-                <div className="w-3 h-3 bg-gray-700"></div>
-                <div className="w-3 h-3 bg-yellow-300 animate-[pulse_1s_ease-in-out_infinite]"></div>
-                <div className="w-3 h-3 bg-gray-700"></div>
-                <div className="w-3 h-3"></div>
-                <div className="w-3 h-3 bg-gray-700"></div>
-                <div className="w-3 h-3"></div>
-              </div>
-            </div>
+            />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-6">
-            <span>Obsidian's </span>
-            <span className="relative inline-block text-gray-700">
-              Smartest
-              <span className="absolute -bottom-1 left-0 w-full h-[0.1em] bg-[#6366F1] transform -rotate-1"></span>
-
-            </span>
-            <span> Companion</span>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+            <span>Keep your Vault</span>
+            <span className="text-primary block">Organized</span>
           </h1>
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
+            <span className="text-xl text-muted-foreground/80 relative">
+              without the hassle
+              <svg className="absolute -bottom-[4px] left-0 w-full" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
+                <path 
+                  d="M0,7 Q100,-1 200,7" 
+                  stroke="blue" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  fill="none"
+                  className="opacity-50"
+                />
+              </svg>
+            </span>
             <div className="h-[1px] w-8 bg-muted-foreground/20"></div>
           </div>
+          <p className="mt-6 text-lg leading-8">
           
-          <p className="mt- text-lg leading-8">
-            Focus on building knowledge, not managing it. Note Companion maintains your vault organized and amplifies your thinking.
-            {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
-          </p>
+           Note Companion is an AI-powered Obsidian plugin that improves your workflow by automatically organizing and formatting your notes—so you don't have to.
 
+
+           {/* It gives you automatic organization suggestions,  packs a powerful AI chat, and other wizardry such as audio transcription, meeting notes enhancement, and ai image processing (OCR). */}
+          </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <a href="https://app.notecompanion.ai">
-              <Button size="lg" className="bg-[#6366F1] text-white hover:bg-[#4F46E5]">
+              <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
                 Start free trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -130,8 +126,8 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Inbox Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
-                <Inbox className="h-6 w-6 text-[#6366F1]" />
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
+                <Inbox className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Automated Organization</h3>
               <p className="text-muted-foreground mb-4">
@@ -149,8 +145,8 @@ export default function Page() {
             </div>
             {/* Chat Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
-                <MessageSquare className="h-6 w-6 text-[#6366F1]" />
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
+                <MessageSquare className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Chat</h3>
               <p className="text-muted-foreground mb-4">
@@ -159,8 +155,8 @@ export default function Page() {
             </div>
             {/* Meetings Feature */}
             <div className="bg-background/60 backdrop-blur-sm p-8 rounded-xl border border-border/40">
-              <div className="h-12 w-12 rounded-lg bg-[#6366F1]/10 flex items-center justify-center mb-6">
-                <Video className="h-6 w-6 text-[#6366F1]" />
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
+                <Video className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Meetings</h3>
               <p className="text-muted-foreground mb-4">
@@ -283,14 +279,14 @@ export default function Page() {
 
 
       {/* Demo Section */}
-      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm hidden lg:block">
+      <div className="w-full max-w-[1200px] px-6 py-24 bg-white/5 backdrop-blur-sm">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            What it looks like in your vault
+            See it in Action
           </h2>
-          {/* <p className="text-lg">
+          <p className="text-lg">
             Experience how Note Companion transforms your workflow
-          </p> */}
+          </p>
         </div>
         <Demo />
       </div>
@@ -338,8 +334,8 @@ export default function Page() {
             {/* <p className="text-lg text-muted-foreground mb-12">
               Whether you're a solo note-taker or a power user looking for advanced features, we've got you covered.
             </p> */}
-            <div className="bg-[#6366F1]/10 border-1 border-[#6366F1] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
-              <p className="text-[#6366F1]">
+            <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
+              <p className="text-[#1570EF]">
                 Educators and students qualify for a 50% discount on the Lifetime plan or a special Monthly rate of $9. To claim this offer, please reach out at alex@fileorganizer2000.com via your education email.
               </p>
             </div>
@@ -352,7 +348,7 @@ export default function Page() {
       <section className="w-full py-24 bg-white/5 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
-             More Stuff You Can Do
+            Discover More Features
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="relative aspect-video rounded-lg overflow-hidden">
@@ -382,14 +378,14 @@ export default function Page() {
         <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-              Messy vault?
+              Tired of having a messy Obsidian vault?
             </h2>
             <p className="text-lg text-muted-foreground mb-10">
               Get Note Companion and enjoy a 7-day free trial on the yearly plan. Bring order to your Obsidian vault. Stop wrestling with messy notes and let AI handle the tedious tasks—so you can focus on what really matters.
             </p>
             <div className="flex items-center justify-center gap-x-6">
               <a href="https://app.notecompanion.ai">
-                <Button size="lg" className="bg-[#6366F1] text-white hover:bg-[#4F46E5]">
+                <Button size="lg" className="text-white bg-primary hover:bg-primary/90">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

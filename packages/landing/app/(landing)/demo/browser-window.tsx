@@ -4,15 +4,15 @@ import React, { type FC, type PropsWithChildren } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, RefreshCw, Plus, Menu } from "lucide-react";
-
+  
 interface BrowserWindowProps extends PropsWithChildren {
-  // Add any additional props here
+  className?: string;
 }
 
-export const BrowserWindow: FC<BrowserWindowProps> = ({ children }) => {
+export const BrowserWindow: FC<BrowserWindowProps> = ({ children, className = "" }) => {
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-xl border border-gray-600 shadow-gray-900 ">
+    <div className={`rounded-lg overflow-hidden shadow-xl border border-gray-600 shadow-gray-900 ${className}`}>
       <div className="p-2 flex items-center">
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>

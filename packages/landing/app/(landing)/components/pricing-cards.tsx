@@ -75,7 +75,7 @@ export function PricingCards() {
             <div className="space-y-3 mb-8">
               {plans.selfHosted.features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-[#6366F1] mt-0.5 shrink-0" />
+                  <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">{feature}</span>
                 </div>
               ))}
@@ -91,27 +91,29 @@ export function PricingCards() {
 
       {/* Subscription - Most Popular */}
       <div className="relative group h-full">
-        <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-[#6366F1]/20 via-[#6366F1]/10 to-[#6366F1]/20 group-hover:from-[#6366F1]/40 group-hover:via-[#6366F1]/25 group-hover:to-[#6366F1]/40 transition-all duration-300" />
+        <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary/40 group-hover:via-primary/25 group-hover:to-primary/40 transition-all duration-300" />
         <div className="relative h-full rounded-2xl bg-background/100 backdrop-blur-sm p-6 flex flex-col justify-between">
           <div>
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <Badge variant="default" className="bg-[#6366F1] hover:bg-[#6366F1] text-white">
-                Most Popular
-              </Badge>
+
+                <Badge variant="default" className="bg-primary hover:bg-primary text-white">
+                  Most Popular
+                </Badge>
+    
             </div>
             <h3 className="text-2xl font-semibold mb-4">Subscription</h3>
             
-            {/* Switch above price section with improved styling */}
+            {/* Switch above price section */}
             <div className="flex items-center justify-center gap-3 mb-2">
-              <span className={`text-sm ${!isYearly ? 'text-[#6366F1] font-medium' : 'text-muted-foreground'}`}>
+              <span className={`text-sm ${!isYearly ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                 Monthly
               </span>
               <Switch
                 checked={isYearly}
                 onCheckedChange={setIsYearly}
-                className="data-[state=checked]:bg-[#6366F1] data-[state=unchecked]:bg-gray-200 data-[state=unchecked]:border-gray-300"
+                className="data-[state=checked]:bg-primary"
               />
-              <span className={`text-sm ${isYearly ? 'text-[#6366F1] font-medium' : 'text-muted-foreground'}`}>
+              <span className={`text-sm ${isYearly ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                 Yearly
               </span>
             </div>
@@ -123,23 +125,23 @@ export function PricingCards() {
                 <span className="text-muted-foreground ml-1">{isYearly ? "/year" : "/month"}</span>
               </div>
               {isYearly ? (
-                <p className="text-sm text-[#6366F1] mt-1">Save ~33% with yearly billing</p>
+                <p className="text-sm text-primary mt-1">Save ~33% with yearly billing</p>
               ) : (
-                <p className="text-sm text-[#6366F1] mt-1">First month $9 with code ANIMUS</p>
+                <p className="text-sm text-primary mt-1">First month $9 with code ANIMUS</p>
               )}
             </div>
 
             <div className="space-y-3 mb-8">
               {plans.subscription.features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-[#6366F1] mt-0.5 shrink-0" />
+                  <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">{feature}</span>
                 </div>
               ))}
             </div>
           </div>
           <Link href="https://app.notecompanion.ai" passHref>
-            <Button className="w-full bg-[#6366F1] hover:bg-[#6366F1]/90 text-white">
+            <Button className="w-full bg-primary hover:bg-primary/90 text-white">
               Start Free Trial
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -159,7 +161,7 @@ export function PricingCards() {
             <div className="space-y-3 mb-8">
               {plans.lifetime.features.map((feature, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <Check className="h-5 w-5 text-[#6366F1] mt-0.5 shrink-0" />
+                  <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <span className="text-muted-foreground">{feature}</span>
                 </div>
               ))}
