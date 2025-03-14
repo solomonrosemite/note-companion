@@ -118,7 +118,7 @@ export const PRODUCTS = {
         interval: "one_time" as const,
       },
     },
-    features: [...standardPayOnceFeatures, "Multiple License Forever"],
+    features: [...standardPayOnceFeatures, "Multiple Licenses with Updates Forever"],
   },
   PayOnceOneYear: {
     name: "Note Companion - Lifetime",
@@ -132,7 +132,7 @@ export const PRODUCTS = {
         type: "one_time" as const,
       },
     },
-    features: [...standardPayOnceFeatures, "One Year of Updates"],
+    features: [...standardPayOnceFeatures, "One License with One Year of Updates"],
   },
   PayOnceTopUp: {
     name: "Note Companion - Top Up",
