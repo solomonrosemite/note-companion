@@ -40,7 +40,7 @@ export const Demo = () => {
       <div className="p-4">
         <div className="space-y-6">
           {/* Recording Section */}
-          <div className="bg-white/90 rounded-lg p-6 border border-border">
+          <div className="bg-transparent rounded-lg p-6 border border-border">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <div
@@ -84,7 +84,7 @@ export const Demo = () => {
           </div>
 
           {/* Recent Recordings */}
-          <div className="bg-white/90 rounded-lg p-6 border border-border">
+          <div className="bg-transparent rounded-lg p-6 border border-border">
             <h3 className="text-lg font-medium mb-4">Recent Recordings</h3>
             <div className="space-y-4">
               <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
@@ -138,7 +138,7 @@ export const Demo = () => {
       <div className="p-4">
         <div className="space-y-6">
           {/* AI Templates Section */}
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium flex items-center">
                 <span role="img" aria-label="robot" className="mr-2">🤖</span>
@@ -167,7 +167,7 @@ export const Demo = () => {
           </div>
 
           {/* Tags Section */}
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <span role="img" aria-label="tags" className="mr-2">🏷️</span>
@@ -186,7 +186,7 @@ export const Demo = () => {
           </div>
 
           {/* Folders Section */}
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <span role="img" aria-label="folder" className="mr-2">📁</span>
@@ -203,7 +203,7 @@ export const Demo = () => {
           </div>
 
           {/* Atomic Notes Section */}
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <span role="img" aria-label="scissors" className="mr-2">✂️</span>
@@ -234,21 +234,21 @@ export const Demo = () => {
       <div className="p-4 space-y-6">
         {/* Status Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white/90 rounded-lg p-4 text-center">
+          <div className="bg-transparent rounded-lg p-4 text-center">
             <div className="text-2xl font-bold">0</div>
             <div className="text-sm text-muted-foreground">Queued</div>
             <div className="mt-2">
               <Clock className="h-5 w-5 mx-auto text-muted-foreground" />
             </div>
           </div>
-          <div className="bg-white/90 rounded-lg p-4 text-center">
+          <div className="bg-transparent rounded-lg p-4 text-center">
             <div className="text-2xl font-bold">0</div>
             <div className="text-sm text-muted-foreground">Processing</div>
             <div className="mt-2">
               <Play className="h-5 w-5 mx-auto text-muted-foreground" />
             </div>
           </div>
-          <div className="bg-white/90 rounded-lg p-4 text-center">
+          <div className="bg-transparent rounded-lg p-4 text-center">
             <div className="text-2xl font-bold">77</div>
             <div className="text-sm text-muted-foreground">Completed</div>
             <div className="mt-2">
@@ -281,7 +281,7 @@ export const Demo = () => {
 
         {/* File List */}
         <div className="space-y-4">
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <span className="line-through text-muted-foreground">
@@ -305,7 +305,7 @@ export const Demo = () => {
             </div>
           </div>
 
-          <div className="bg-white/90 rounded-lg p-4 border border-border">
+          <div className="bg-transparent rounded-lg p-4 border border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <span className="line-through text-muted-foreground">
@@ -494,7 +494,7 @@ export const Demo = () => {
     const info = explanations[tab];
 
     return (
-      <div className="bg-white/90 border-b border-border">
+      <div className="bg-transparent border-b border-border">
         <div className="max-w-2xl mx-auto p-4 space-y-3">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">Functionality Overview</p>
           <div className="flex items-start gap-4">
@@ -547,11 +547,11 @@ export const Demo = () => {
   };
 
   return (
-    <BrowserWindow className="">
+    <BrowserWindow className="bg-transparent">
     
       <div className="flex rounded-l-md">
         {/* Left Sidebar - Markdown Editor */}
-        <div className="hidden md:block w-[600px] border-r border-border bg-white/90">
+        <div className="hidden md:block w-[600px] border-r border-border bg-transparent">
           <div className="h-full flex flex-col">
             {/* File Header */}
             <div className="border-b border-border p-4">
@@ -672,7 +672,7 @@ export const Demo = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 bg-white/90 text-foreground rounded-r-md">
+        <div className="flex-1 bg-transparent text-foreground rounded-r-md">
           <div className="border-b border-border">
             <div className="flex space-x-1 p-2">
               {tabs.map((tab) => (
@@ -681,7 +681,7 @@ export const Demo = () => {
                   variant={activeTab === tab.id ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`text-sm ${activeTab === tab.id ? "bg-[#6366F1] text-white" : ""}`}
+                  className={`text-sm ${activeTab === tab.id ? "bg-primary text-white" : ""}`}
                 >
                   {tab.label}
                 </Button>
