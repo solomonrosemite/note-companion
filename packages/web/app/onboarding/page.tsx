@@ -37,18 +37,19 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
-      <main className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-2 gap-12">
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column */}
           <div>
-            <section className="mb-12">
-              <h1 className="text-4xl font-bold mb-4">
+            <section>
+              <h1 className="text-3xl md:text-4xl font-bold mb-3">
                 Welcome to Note Companion
               </h1>
-              <p className="text-xl mb-8">
+              <p className="text-lg mb-6">
                 Powerful AI features to organize and enhance your Obsidian
                 experience.
               </p>
-              <div className="aspect-video mb-8">
+              <div className="aspect-video mb-6">
                 <iframe
                   className="w-full h-full rounded-lg shadow-lg"
                   src="https://youtube.com/embed/videoseries?list=PLgRcC-DFR5jcwwg0Dr3gNZrkZxkztraKE&controls=1&rel=0&modestbranding=1"
@@ -58,26 +59,26 @@ export default function OnboardingPage() {
               </div>
               
               {/* Features section */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <h2 className="text-2xl font-semibold">Key Features</h2>
-                <div className="grid gap-6">
+                <div className="grid gap-4">
                   {FEATURES.map((feature, index) => (
                     <Card 
                       key={index} 
-                      className="p-6 border-0 shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] overflow-hidden relative group bg-white rounded-md"
+                      className="p-4 border-0 shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.01] overflow-hidden relative group bg-white rounded-md"
                     >
                       {/* Gradient background that shows on hover */}
                       <div className={`absolute inset-0 opacity-0 bg-gradient-to-r ${feature.color} group-hover:opacity-5 transition-opacity duration-300`}></div>
                       
                       <div className="flex items-start relative z-10">
-                        <div className={`shrink-0 mr-5 rounded-lg p-3 ${feature.bgLight} bg-opacity-80 transition-all duration-300 group-hover:scale-110`}>
+                        <div className={`shrink-0 mr-4 rounded-lg p-2 ${feature.bgLight} bg-opacity-80 transition-all duration-300 group-hover:scale-110`}>
                           <div className={`text-gradient bg-gradient-to-br ${feature.color}`}>
                             {feature.icon}
                           </div>
                         </div>
                         <div>
-                          <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
-                          <p className="text-gray-600">{feature.description}</p>
+                          <h3 className="font-bold text-lg mb-1">{feature.title}</h3>
+                          <p className="text-gray-600 text-sm">{feature.description}</p>
                         </div>
                       </div>
                     </Card>
@@ -90,29 +91,29 @@ export default function OnboardingPage() {
           {/* Right Column: Pricing with Benefits Reminder */}
           <div>
             {/* Benefits Reminder Section */}
-            <div className="mb-8">
-              <div className="bg-white p-5 rounded-lg border border-violet-200 shadow-sm">
+            <div className="mb-6">
+              <div className="bg-white p-4 rounded-lg border border-violet-200 shadow-sm">
                 <h3 className="text-xl font-semibold mb-3 text-violet-700">Why Choose Note Companion?</h3>
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   <li className="flex items-start">
                     <Check className="h-5 w-5 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>AI-powered organization that saves hours of manual sorting</span>
+                    <span className="text-sm">AI-powered organization that saves hours of manual sorting</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>Seamless integration with Obsidian that enhances your workflow</span>
+                    <span className="text-sm">Seamless integration with Obsidian that enhances your workflow</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>Convert handwritten notes and audio recordings to searchable text</span>
+                    <span className="text-sm">Convert handwritten notes and audio recordings to searchable text</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>Mobile app for capturing and organizing on the go</span>
+                    <span className="text-sm">Mobile app for capturing and organizing on the go</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span>Chat with your documents using natural language</span>
+                    <span className="text-sm">Chat with your documents using natural language</span>
                   </li>
                 </ul>
               </div>
@@ -122,12 +123,12 @@ export default function OnboardingPage() {
         </div>
       </main>
 
-      <footer className="bg-gray-100 py-8 mt-16">
+      <footer className="bg-gray-100 py-6 mt-8">
         <div className="container mx-auto px-4 text-center">
           <a href="https://discord.gg/udQnCRFyus" target="_blank" rel="noopener noreferrer">
             <Button variant="outline">Join our discord</Button>
           </a>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Different AI Inc. All rights
             reserved.
           </p>
