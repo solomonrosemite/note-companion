@@ -101,27 +101,27 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
               Best Value
             </span>
           </div>
-        ) : (
-          isLifetime && (
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-              <span className="bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-sm font-semibold">
-                Self-Hosted
-              </span>
-            </div>
-          )
-        )}
+        ) : null}
 
         <CardHeader className="pb-4">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col">
             <div>
               <div className="flex items-center mb-2">
                 <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
-                {!isSubscription ? (
-                  <div className="ml-2 px-2 py-1 bg-violet-100 rounded-md">
-                    <span className="text-xs font-semibold text-violet-700">SELF-HOSTED</span>
-                  </div>
-                ) : null}
               </div>
+              <CardDescription className="text-3xl font-bold text-black mt-3 mb-3">
+                ${price.amount / 100}
+                {isSubscription && (
+                  <span className="text-sm font-normal text-gray-500 ml-1">
+                    /{price.interval}
+                    {isYearly && (
+                      <div className="text-xs text-violet-600 font-semibold mt-1">
+                        Save ~33% with yearly billing
+                      </div>
+                    )}
+                  </span>
+                )}
+              </CardDescription>
               <div className="flex items-center gap-3 mt-3 mb-2">
                 <span className={`text-sm font-medium ${isSubscription && !isYearly ? 'text-violet-700 font-semibold' : 'text-gray-600'}`}>
                   {isSubscription ? "Monthly" : "1 Year"}
@@ -138,19 +138,6 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
                 </span>
               </div>
             </div>
-            <CardDescription className="text-3xl font-bold text-black mt-1">
-              ${price.amount / 100}
-              {isSubscription && (
-                <span className="text-sm font-normal text-gray-500 ml-1">
-                  /{price.interval}
-                  {isYearly && (
-                    <div className="text-xs text-violet-600 font-semibold mt-1">
-                      Save ~33% with yearly billing
-                    </div>
-                  )}
-                </span>
-              )}
-            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pt-4 pb-6">
