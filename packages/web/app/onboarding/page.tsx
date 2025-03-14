@@ -38,7 +38,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
       <main className="container mx-auto px-4 py-8">
-      <div className="grid gap-8 md:grid-cols-[3fr_4fr]">
+      <div className="grid gap-8 md:grid-cols-[3fr_5fr]">
 
           {/* Left Column */}
           <div>
