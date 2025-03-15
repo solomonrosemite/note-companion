@@ -1,1 +1,0 @@
-bug fix for empty job openings list & support for tracking jobs application external source

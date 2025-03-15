@@ -1,3 +1,0 @@
-- Run 4k
-- Go to Tesla
-- Read 10 pages

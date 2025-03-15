@@ -1,3 +1,0 @@
-Finklesetin
-
-Illan pappe
