@@ -12,7 +12,9 @@ import { unlink } from 'fs/promises';
 
 // Constants for timing and chunks
 const CHUNK_SIZE = 20 * 60; // 20 minutes in seconds (buffer for processing overhead)
-export const maxDuration = 7200; // 120 minutes for long transcriptions
+
+// Serverless Function "api/transcribe". Serverless Functions must have a maxDuration between 1 and 800 for plan pro. : https://vercel.com/docs/concepts/limits/overview#serverless-function-execution-timeout
+export const maxDuration = 800; // 120 minutes for long transcriptions
 
 // Schema for request validation
 const requestSchema = z.object({
