@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
 import { put } from '@vercel/blob';
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
@@ -9,7 +10,9 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { unlink } from 'fs/promises';
 
-const CHUNK_SIZE = 24 * 60; // 24 minutes in seconds (just under Whisper's 25 min limit)
+// Constants for timing and chunks
+const CHUNK_SIZE = 20 * 60; // 20 minutes in seconds (buffer for processing overhead)
+export const maxDuration = 7200; // 120 minutes for long transcriptions
 
 // Schema for request validation
 const requestSchema = z.object({
@@ -79,19 +82,9 @@ async function splitAudioIntoChunks(audioBuffer: Buffer, extension: string) {
 
 // Helper function to read file as buffer
 async function readFile(path: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(path, (err, metadata) => {
-      if (err) reject(err);
-      else {
-        import('fs/promises').then(fs => 
-          fs.readFile(path).then(resolve).catch(reject)
-        ).catch(reject);
-      }
-    });
-  });
+  const fs = await import('fs/promises');
+  return fs.readFile(path);
 }
-
-export const maxDuration = 300; // 5 minutes for the API route
 
 export async function POST(request: Request) {
   try {
@@ -117,16 +110,11 @@ export async function POST(request: Request) {
     // Convert base64 to buffer
     const audioBuffer = Buffer.from(base64Data, 'base64');
 
-    // Upload to Vercel Blob with 1-hour cache
+    // Upload to Vercel Blob with 24-hour cache for long audio files
     const { url } = await put(`transcribe/${session.userId}/${Date.now()}.${extension}`, audioBuffer, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 3600, // 1 hour cache
-    });
-
-    // Initialize OpenAI
-    const openai = new OpenAI({ 
-      apiKey: process.env.OPENAI_API_KEY,
+      cacheControlMaxAge: 86400, // 24 hour cache
     });
 
     // Split audio into chunks if needed
@@ -137,21 +125,39 @@ export async function POST(request: Request) {
       // Add delay between chunks to avoid rate limits
       await new Promise(resolve => setTimeout(resolve, index * 1000));
       
-      const transcription = await openai.audio.transcriptions.create({
-        file: new File([new Uint8Array(chunk)], `chunk-${index}.${extension}`, { type: `audio/${extension}` }),
-        model: "whisper-1",
+      // Use Vercel AI SDK with OpenAI for transcription
+      const { text } = await generateText({
+        model: openai('gpt-4o-audio-preview'),
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'file',
+                data: chunk,
+                mimeType: `audio/${extension}`,
+              },
+              {
+                type: 'text',
+                text: 'Please transcribe this audio segment accurately.',
+              }
+            ],
+          },
+        ],
       });
       
-      return transcription.text;
+      return text;
     });
+
+    // Process all chunks in parallel and wait for all to complete
+    const results = await Promise.all(transcriptionPromises);
 
     // Stream results back to client
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for (const promise of transcriptionPromises) {
-            const text = await promise;
+          for (const text of results) {
             controller.enqueue(encoder.encode(text + " "));
           }
           controller.close();
