@@ -62,8 +62,6 @@ export async function POST(request: NextRequest) {
     const tokens = response.usage.totalTokens;
     console.log("incrementing token usage titles", userId, tokens);
     await incrementAndLogTokenUsage(userId, tokens);
-    // make sure all titles are file system safe
-    console.log("sanitizing titles", response.object.suggestedTitles);
     const safeTitles = response.object.suggestedTitles.map((title) => {
       return { ...title, title: title.title };
     });
