@@ -502,51 +502,82 @@ export default class FileOrganizer extends Plugin {
     return formattedContent;
   }
 
-  async transcribeAudio(
-    audioBuffer: ArrayBuffer,
-    fileExtension: string
-  ): Promise<Response> {
-    // Convert ArrayBuffer to base64
-    const base64Audio = Buffer.from(audioBuffer).toString('base64');
-    const serverUrl = this.getServerUrl();
-
-    const response = await fetch(`${serverUrl}/api/transcribe`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.settings.API_KEY}`,
-      },
-      body: JSON.stringify({
-        audio: `data:audio/${fileExtension};base64,${base64Audio}`,
-        extension: fileExtension,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Transcription failed: ${errorData.error}`);
-    }
-    return response;
-  }
-
-  async generateTranscriptFromAudio(
-    file: TFile
-  ): Promise<AsyncIterableIterator<string>> {
+  async transcribeAudio(audioBuffer: ArrayBuffer, fileExtension: string): Promise<string> {
     try {
-      const audioBuffer = await this.app.vault.readBinary(file);
-      const response = await this.transcribeAudio(audioBuffer, file.extension);
+      const serverUrl = this.getServerUrl();
 
-      if (!response.body) {
-        throw new Error("Response body is null");
+      // First get a presigned URL for upload
+      const presignedResponse = await fetch(`${serverUrl}/api/transcribe/presigned`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.settings.API_KEY}`,
+        },
+        body: JSON.stringify({
+          extension: fileExtension,
+        }),
+      });
+
+      if (!presignedResponse.ok) {
+        throw new Error('Failed to get presigned URL');
       }
 
-      const reader = response.body.getReader();
+      const { url, uploadUrl } = await presignedResponse.json();
+
+      // Upload the file directly to Vercel Blob Storage
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        body: new Blob([audioBuffer], { type: `audio/${fileExtension}` }),
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      // Now send the blob URL to our transcribe endpoint
+      const transcribeResponse = await fetch(`${serverUrl}/api/transcribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.settings.API_KEY}`,
+        },
+        body: JSON.stringify({
+          blobUrl: url,
+          extension: fileExtension,
+        }),
+      });
+
+      if (!transcribeResponse.ok) {
+        throw new Error('Failed to transcribe audio');
+      }
+
+      // Read the streamed response
+      const reader = transcribeResponse.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let transcription = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        transcription += new TextDecoder().decode(value);
+      }
+
+      return transcription;
+    } catch (error) {
+      console.error('Error in transcribeAudio:', error);
+      throw error;
+    }
+  }
+
+  async generateTranscriptFromAudio(file: TFile): Promise<AsyncIterableIterator<string>> {
+    try {
+      const audioBuffer = await this.app.vault.readBinary(file);
+      const transcription = await this.transcribeAudio(audioBuffer, file.extension);
 
       async function* generateTranscript() {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          yield new TextDecoder().decode(value);
-        }
+        yield transcription;
       }
 
       return generateTranscript();

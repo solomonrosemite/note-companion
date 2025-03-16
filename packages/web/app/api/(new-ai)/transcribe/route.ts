@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import { put } from '@vercel/blob';
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import ffmpeg from 'fluent-ffmpeg';
@@ -18,7 +17,7 @@ export const maxDuration = 800; // 120 minutes for long transcriptions
 
 // Schema for request validation
 const requestSchema = z.object({
-  audio: z.string(),
+  blobUrl: z.string().url(),
   extension: z.string().refine(ext => ['mp3', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'].includes(ext)),
 });
 
@@ -103,21 +102,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { audio, extension } = result.data;
-    const base64Data = audio.split(";base64,").pop();
-    if (!base64Data) {
-      return NextResponse.json({ error: "Invalid base64 data" }, { status: 400 });
+    const { blobUrl, extension } = result.data;
+
+    // Download the audio file from the blob URL
+    const audioResponse = await fetch(blobUrl);
+    if (!audioResponse.ok) {
+      throw new Error('Failed to download audio from blob storage');
     }
-
-    // Convert base64 to buffer
-    const audioBuffer = Buffer.from(base64Data, 'base64');
-
-    // Upload to Vercel Blob with 24-hour cache for long audio files
-    const { url } = await put(`transcribe/${session.userId}/${Date.now()}.${extension}`, audioBuffer, {
-      access: 'public',
-      addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hour cache
-    });
+    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
 
     // Split audio into chunks if needed
     const chunks = await splitAudioIntoChunks(audioBuffer, extension);
