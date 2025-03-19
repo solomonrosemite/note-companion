@@ -1,7 +1,7 @@
 import { clerkClient, auth } from "@clerk/nextjs/server";
 import { verifyKey } from "@unkey/api";
 import { NextRequest } from "next/server";
-import { checkTokenUsage } from "../drizzle/schema";
+import { checkTokenUsage, checkUserSubscriptionStatus } from "../drizzle/schema";
 import PostHogClient from "./posthog";
 
 /**
@@ -80,6 +80,11 @@ export async function handleAuthorizationV2(req: NextRequest) {
       if (result.valid) {
         // API key is valid
         console.log("API key authentication successful");
+        // Check subscription status
+        const isActive = await checkUserSubscriptionStatus(result.ownerId);
+        if (!isActive) {
+          throw new AuthorizationError("Subscription canceled or inactive", 403);
+        }
         // Might require await
         handleLoggingV2(req, result.ownerId);
         return { userId: result.ownerId };
@@ -95,6 +100,11 @@ export async function handleAuthorizationV2(req: NextRequest) {
     const { userId } = await auth();
     if (userId) {
       console.log("Clerk authentication successful");
+      // Check subscription status
+      const isActive = await checkUserSubscriptionStatus(userId);
+      if (!isActive) {
+        throw new AuthorizationError("Subscription canceled or inactive", 403);
+      }
       handleLoggingV2(req, userId);
       return { userId };
     }
@@ -132,6 +142,12 @@ export async function handleAuthorization(req: NextRequest) {
   if (!result.valid) {
     console.error(result);
     throw new AuthorizationError(`Unauthorized: ${result.code}`, 401);
+  }
+
+  // Check subscription status
+  const isActive = await checkUserSubscriptionStatus(result.ownerId);
+  if (!isActive) {
+    throw new AuthorizationError("Subscription canceled or inactive", 403);
   }
 
   // Check token usage
