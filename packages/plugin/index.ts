@@ -506,33 +506,25 @@ export default class FileOrganizer extends Plugin {
     try {
       const serverUrl = this.getServerUrl();
 
-      // First get a presigned URL for upload
-      const presignedResponse = await fetch(`${serverUrl}/api/transcribe/presigned`, {
+      // Create a FormData object with the audio file
+      const formData = new FormData();
+      formData.append('file', new Blob([audioBuffer], { type: `audio/${fileExtension}` }), `recording.${fileExtension}`);
+      
+      // Upload directly to our server endpoint
+      const uploadResponse = await fetch(`${serverUrl}/api/transcribe/upload`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${this.settings.API_KEY}`,
         },
-        body: JSON.stringify({
-          extension: fileExtension,
-        }),
-      });
-
-      if (!presignedResponse.ok) {
-        throw new Error('Failed to get presigned URL');
-      }
-
-      const { url, uploadUrl } = await presignedResponse.json();
-
-      // Upload the file directly to Vercel Blob Storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        body: new Blob([audioBuffer], { type: `audio/${fileExtension}` }),
+        body: formData,
       });
 
       if (!uploadResponse.ok) {
         throw new Error('Failed to upload file');
       }
+      
+      // Get the URL of the uploaded file
+      const { url } = await uploadResponse.json();
 
       // Now send the blob URL to our transcribe endpoint
       const transcribeResponse = await fetch(`${serverUrl}/api/transcribe`, {
