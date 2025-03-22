@@ -1,170 +1,374 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, uploadedFiles } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
-import { del, list } from "@vercel/blob";
 import { Mistral } from "@mistralai/mistralai";
 import { incrementAndLogTokenUsage } from "@/lib/incrementAndLogTokenUsage";
 import { auth } from "@clerk/nextjs/server";
-import sharp from 'sharp';
-import { FilePurpose } from "@mistralai/mistralai/models/components";
-import OpenAI from "openai";
+import sharp from "sharp";
+import { OpenAI } from "openai";
+import { generateObject } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { z } from "zod";
 
 export const maxDuration = 60; // 1 minute (maximum allowed for hobby plan)
 
-// Define interfaces for OCR responses based on Mistral's API
-interface PageContent {
-  text?: string;
-  content?: string;
-  markdown?: string;
-  [key: string]: unknown; // Use unknown instead of any
-}
-
-interface MistralOCRResponse {
-  pages: Array<string | PageContent>;
-  usageInfo?: {
-    totalTokens?: number;
-    promptTokens?: number;
-    completionTokens?: number;
-    total_tokens?: number; // Fallback for older API versions
-  };
-  text?: string;
-  content?: string;
-  markdown?: string;
-  [key: string]: unknown; // Use unknown instead of any
-}
-
-// Define extended FilePurpose type to include "ocr" which might not be in the SDK yet
-type MistralFilePurpose = 
-  | "fine-tuning"
-  | "assistants"
-  | "batch"
-  | "ocr" // Add OCR purpose which might be missing from SDK types
-  | string; // Fallback to allow for future purposes without breaking
-
 // Define custom error type
-interface ProcessingError extends Error {
+interface ProcessingError {
   message: string;
   stack?: string;
   code?: string;
   statusCode?: number;
 }
 
+interface OCRImage {
+  url?: string;
+  data?: string;
+  type?: string;
+}
+
+interface OCRPage {
+  index: number;
+  markdown: string;
+  images: OCRImage[];
+  dimensions: {
+    dpi: number;
+    height: number;
+    width: number;
+  };
+}
+
+interface OCRResponse {
+  pages?: OCRPage[];
+  data?: {
+    text?: string;
+    content?: string;
+    markdown?: string;
+  };
+  text?: string;
+  content?: string;
+  markdown?: string;
+  items?: Array<{ text?: string }>;
+  usage?: {
+    total_tokens?: number;
+    totalTokens?: number;
+  };
+  rawResponse?: unknown;
+  fullResponse?: unknown;
+}
+
 // Helper function to compress image
-async function compressImage(buffer: Buffer, fileType: string): Promise<Buffer> {
+async function compressImage(
+  buffer: Buffer,
+  fileType: string
+): Promise<Buffer> {
   // Skip compression for non-image files
-  if (!fileType || 
-      fileType.includes('pdf') || 
-      fileType === 'application/pdf' || 
-      !fileType.startsWith('image/')) {
-    return buffer; // Return original buffer for non-image files
+  if (!fileType.startsWith("image/")) {
+    return buffer;
   }
-  
+
   try {
-    // Process image with Sharp
-    return await sharp(buffer)
-      .resize(800, 800, { // Resize to max 800x800 while maintaining aspect ratio
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .jpeg({ // Convert to JPEG with moderate compression
-        quality: 60,
-        mozjpeg: true
-      })
-      .toBuffer();
+    console.log(
+      `Compressing image of type ${fileType} and size ${buffer.length} bytes`
+    );
+
+    // Determine the format based on the fileType
+    let format: string;
+    if (fileType === "image/jpeg" || fileType === "image/jpg") {
+      format = "jpeg";
+    } else if (fileType === "image/png") {
+      format = "png";
+    } else if (fileType === "image/webp") {
+      format = "webp";
+    } else if (fileType === "image/gif") {
+      format = "gif";
+    } else if (fileType === "image/tiff") {
+      format = "tiff";
+    } else {
+      // Default to jpeg for other image types
+      format = "jpeg";
+    }
+
+    // Optimize the image
+    // - Use jpeg with quality 85 for photographs (good balance of quality and size)
+    // - Use png for screenshots or diagrams (maintains text quality)
+    // - Resize very large images to reasonable dimensions
+    let processedImage = sharp(buffer);
+
+    // Get image metadata to check dimensions
+    const metadata = await processedImage.metadata();
+
+    // If image is extremely large, resize it to reasonable dimensions
+    // This helps with OCR performance and reduces upload size
+    const MAX_DIMENSION = 3000; // Maximum width or height
+    if (
+      (metadata.width && metadata.width > MAX_DIMENSION) ||
+      (metadata.height && metadata.height > MAX_DIMENSION)
+    ) {
+      console.log(
+        `Resizing large image from ${metadata.width}x${metadata.height}`
+      );
+      processedImage = processedImage.resize({
+        width:
+          metadata.width && metadata.width > MAX_DIMENSION
+            ? MAX_DIMENSION
+            : undefined,
+        height:
+          metadata.height && metadata.height > MAX_DIMENSION
+            ? MAX_DIMENSION
+            : undefined,
+        fit: "inside",
+        withoutEnlargement: true,
+      });
+    }
+
+    // Optimize based on format
+    if (format === "jpeg") {
+      processedImage = processedImage.jpeg({ quality: 85, mozjpeg: true });
+    } else if (format === "png") {
+      processedImage = processedImage.png({
+        compressionLevel: 9,
+        adaptiveFiltering: true,
+      });
+    } else if (format === "webp") {
+      processedImage = processedImage.webp({ quality: 85 });
+    } else {
+      // For other formats, just resize without changing format
+      processedImage = processedImage.rotate(); // No-op transform to maintain the pipeline
+    }
+
+    // Convert to buffer
+    const compressedBuffer = await processedImage.toBuffer();
+
+    console.log(
+      `Compressed image from ${buffer.length} to ${
+        compressedBuffer.length
+      } bytes (${Math.round((compressedBuffer.length / buffer.length) * 100)}%)`
+    );
+
+    return compressedBuffer;
   } catch (error) {
-    console.error('Image compression error:', error);
-    return buffer; // Return original buffer if compression fails
+    console.error("Error compressing image:", error);
+    // Return original buffer if compression fails
+    return buffer;
   }
 }
 
-// Function to extract text from images using GPT-4o when Mistral fails
-async function extractTextWithGPT4o(imageUrl: string): Promise<string> {
-  console.log("Falling back to GPT-4o for image text extraction");
-  
+// Helper function to extract text from OCR response
+function extractTextFromOCRResponse(ocrResponse: OCRResponse): {
+  textContent: string;
+  tokensUsed: number;
+} {
   try {
-    const openai = new OpenAI({
+    console.log("Extracting text from OCR response");
+
+    let textContent = "";
+    let tokensUsed = 0;
+
+    // Check if the response has a pages array
+    if (Array.isArray(ocrResponse.pages)) {
+      console.log("Found pages array in OCR response");
+      textContent = ocrResponse.pages
+        .map((page: OCRPage) => page.markdown || "")
+        .join("\n\n");
+    }
+    // Check if the response has a text field
+    else if (ocrResponse.data?.text) {
+      console.log("Found text in OCR response.data.text");
+      textContent = ocrResponse.data.text;
+    }
+    // Check if the response has a content field
+    else if (ocrResponse.data?.content) {
+      console.log("Found text in OCR response.data.content");
+      textContent = ocrResponse.data.content;
+    }
+    // Check if the response has a markdown field
+    else if (ocrResponse.data?.markdown) {
+      console.log("Found text in OCR response.data.markdown");
+      textContent = ocrResponse.data.markdown;
+    }
+    // Check for direct properties
+    else if (ocrResponse.text) {
+      console.log("Found text in OCR response.text");
+      textContent = ocrResponse.text;
+    } else if (ocrResponse.content) {
+      console.log("Found text in OCR response.content");
+      textContent = ocrResponse.content;
+    } else if (ocrResponse.markdown) {
+      console.log("Found text in OCR response.markdown");
+      textContent = ocrResponse.markdown;
+    }
+    // Check for nested items
+    else if (Array.isArray(ocrResponse.items)) {
+      console.log("Found items array in OCR response");
+      textContent = ocrResponse.items.map((item) => item.text || "").join(" ");
+    }
+    // Fallback: stringify the entire response (excluding large nested objects)
+    else {
+      console.log(
+        "No recognized text fields found in OCR response, using fallback"
+      );
+      // Create a safe version of the response for stringification
+      const safeResponse = { ...ocrResponse };
+      // Remove potentially large or circular properties
+      delete safeResponse.rawResponse;
+      delete safeResponse.fullResponse;
+
+      textContent = `OCR Response: ${JSON.stringify(safeResponse)}`;
+    }
+
+    // Extract token usage if available
+    if (ocrResponse.usage) {
+      if (typeof ocrResponse.usage.total_tokens === "number") {
+        tokensUsed = ocrResponse.usage.total_tokens;
+        console.log(`Found token usage in total_tokens: ${tokensUsed}`);
+      } else if (typeof ocrResponse.usage.totalTokens === "number") {
+        tokensUsed = ocrResponse.usage.totalTokens;
+        console.log(`Found token usage in totalTokens: ${tokensUsed}`);
+      } else {
+        // Attempt to estimate tokens based on text length
+        tokensUsed = Math.ceil(textContent.length / 4);
+        console.log(
+          `Estimated token usage based on text length: ${tokensUsed}`
+        );
+      }
+    } else {
+      // Estimate tokens if usage info isn't available
+      tokensUsed = Math.ceil(textContent.length / 4);
+      console.log(`No usage info found, estimated token usage: ${tokensUsed}`);
+    }
+
+    return {
+      textContent,
+      tokensUsed,
+    };
+  } catch (error) {
+    console.error("Error extracting text from OCR response:", error);
+    return {
+      textContent: `Error extracting text from OCR response: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      tokensUsed: 0,
+    };
+  }
+}
+
+// Helper function to process image with GPT-4o
+async function processImageWithGPT4o(
+  imageUrl: string
+): Promise<{ textContent: string; tokensUsed: number }> {
+  try {
+    console.log("Processing image with GPT-4o...");
+
+  
+    // Call the vision API with GPT-4o
+    // use generateObject from vercel ai sdk
+
+    const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+
+    const { object } = await generateObject({
+      model: openai("gpt-4o"),
+      prompt:
+        "Extract all text from this image. Be comprehensive and maintain original formatting where possible.",
+      schema: z.object({
+        markdown: z.string(),
+      }),
       messages: [
-        {
-          role: "system",
-          content: "You are an OCR assistant. Extract all text from the provided image. If there are any diagrams or visual elements, describe them briefly."
-        },
         {
           role: "user",
           content: [
-            { type: "text", text: "Extract all text visible in this image and provide it in a clean, structured format." },
-            { type: "image_url", image_url: { url: imageUrl } }
-          ]
-        }
+            { type: "image", image: imageUrl },
+          ],
+        },
       ],
-      max_tokens: 1500,
     });
-    
-    const extractedText = response.choices[0]?.message?.content || "No text extracted";
-    console.log("GPT-4o extraction successful, text length:", extractedText.length);
-    
-    return extractedText;
+
+    // Extract the text content and token usage information
+    const textContent = object.markdown || "";
+    const tokensUsed = 0;
+
+    console.log(
+      `GPT-4o extracted ${textContent.length} characters, used ${tokensUsed} tokens`
+    );
+
+    return {
+      textContent,
+      tokensUsed,
+    };
   } catch (error) {
-    console.error("Error with GPT-4o text extraction:", error);
-    return "Error extracting text from image with GPT-4o";
+    console.error("Error processing image with GPT-4o:", error);
+    return {
+      textContent: `Error processing image with GPT-4o: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      tokensUsed: 0,
+    };
   }
 }
 
 export async function POST(request: NextRequest) {
-  let fileId: number | string | null = null;
-  
+  let tokensUsed = 0;
+  let textContent = "";
+  // We declare embeddings here but only use it in the database update
+  // (kept for future implementation of embedding generation)
+  const embeddings: number[] = []; // This will be used in the future for embeddings
+  let queryFileId: number | string | null = null;
+  let uploadedImage: {
+    id: string;
+    filename: string;
+    createdAt: string;
+  } | null = null;
+  let signedUrl: { url: string } | null = null;
+
   try {
     // Check authentication first
+    console.log("API: Received request to process file");
     const { userId } = await auth();
     const authHeader = request.headers.get("authorization");
-    const payload = await request.json() as { fileId: number | string };
-    fileId = payload.fileId;
-    
+    const payload = (await request.json()) as { fileId: number | string };
+    queryFileId = payload.fileId;
+
     // Log the received fileId for debugging
-    console.log("Received fileId:", fileId, "Type:", typeof fileId);
-    
+    console.log("Processing file ID:", queryFileId);
+
     // Handle API key auth from mobile app
     if (!userId && authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      
+
       if (!token) {
         console.error("Unauthorized process attempt - invalid token");
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      
+
       // For mobile requests with a token, we need to validate the token
       // Extract userId from token for mobile auth
       let tokenUserId = null;
-      
+
       try {
         // Log token for debugging
         console.log("Processing mobile token:", token.substring(0, 20) + "...");
-        
+
         // Basic JWT structure check
-        const parts = token.split('.');
+        const parts = token.split(".");
         if (parts.length === 3) {
           // This is likely a JWT - try to decode the payload
           // Add proper base64 padding if needed
-          let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
           while (base64.length % 4) {
-            base64 += '=';
+            base64 += "=";
           }
-          
-          const payload = JSON.parse(Buffer.from(base64, 'base64').toString()) as {
+
+          const payload = JSON.parse(
+            Buffer.from(base64, "base64").toString()
+          ) as {
             sub?: string;
             userId?: string;
             user_id?: string;
             [key: string]: unknown; // Use unknown instead of any
           };
           console.log("Decoded token payload:", JSON.stringify(payload));
-          
+
           // Check for user ID in different possible claims
           if (payload.sub) {
             tokenUserId = payload.sub;
@@ -184,42 +388,48 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-      
+
       // Continue with file processing for mobile
-      if (!fileId) {
+      if (!queryFileId) {
         return NextResponse.json(
           { error: "File ID is required" },
           { status: 400 }
         );
       }
-      
+
       // Convert fileId to number if possible for database query
-      let queryFileId: number;
+      let queryFileIdNumber: number;
       try {
-        if (typeof fileId === 'string' && fileId.startsWith('text-')) {
-          console.log("Mobile text ID detected, querying using string ID:", fileId);
+        if (
+          typeof queryFileId === "string" &&
+          queryFileId.startsWith("text-")
+        ) {
+          console.log(
+            "Mobile text ID detected, querying using string ID:",
+            queryFileId
+          );
           // Need to query by string ID for mobile app-generated IDs
           // Check if we have the mobile text ID in our database
-          const [file] = await db
+          const [fileRecord] = await db
             .select()
             .from(uploadedFiles)
-            .where(eq(uploadedFiles.originalName, fileId))
+            .where(eq(uploadedFiles.originalName, queryFileId))
             .limit(1);
-            
-          if (!file) {
+
+          if (!fileRecord) {
             return NextResponse.json(
               { error: "File not found" },
               { status: 404 }
             );
           }
-          
+
           // Use the numeric ID from the database for subsequent operations
-          queryFileId = file.id;
+          queryFileIdNumber = fileRecord.id;
         } else {
           // Try to convert to number for standard fileIds
-          queryFileId = Number(fileId);
-          
-          if (isNaN(queryFileId)) {
+          queryFileIdNumber = Number(queryFileId);
+
+          if (isNaN(queryFileIdNumber)) {
             return NextResponse.json(
               { error: "Invalid file ID format" },
               { status: 400 }
@@ -233,50 +443,49 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      
-      console.log("Using queryFileId for database operations:", queryFileId);
-      
+
+      console.log(
+        "Using queryFileId for database operations:",
+        queryFileIdNumber
+      );
+
       // Get the file record
-      const [file] = await db
+      const [fileRecord] = await db
         .select()
         .from(uploadedFiles)
-        .where(eq(uploadedFiles.id, queryFileId))
+        .where(eq(uploadedFiles.id, queryFileIdNumber))
         .limit(1);
-      
-      if (!file) {
-        return NextResponse.json(
-          { error: "File not found" },
-          { status: 404 }
-        );
+
+      if (!fileRecord) {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
       }
-      
+
       // For debugging only - log user IDs but don't reject yet
-      if (tokenUserId && file.userId !== tokenUserId) {
-        console.log(`Notice: File userId (${file.userId}) doesn't match token userId (${tokenUserId}), but allowing for testing`);
+      if (tokenUserId && fileRecord.userId !== tokenUserId) {
+        console.log(
+          `Notice: File userId (${fileRecord.userId}) doesn't match token userId (${tokenUserId}), but allowing for testing`
+        );
         // We'll temporarily allow access even if the user IDs don't match
         // return NextResponse.json(
         //   { error: "Unauthorized" },
         //   { status: 401 }
         // );
       }
-      
+
       // Update the file status to processing
       await db
         .update(uploadedFiles)
         .set({ status: "processing" })
-        .where(eq(uploadedFiles.id, queryFileId));
-      
+        .where(eq(uploadedFiles.id, queryFileIdNumber));
+
       // Return success response
       return NextResponse.json({ success: true });
     } else if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     // Regular web authentication flow
-    if (!fileId) {
+    if (!queryFileId) {
       return NextResponse.json(
         { error: "File ID is required" },
         { status: 400 }
@@ -284,32 +493,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert fileId to number if possible for database query
-    let queryFileId: number;
+    let queryFileIdNumber: number;
     try {
-      if (typeof fileId === 'string' && fileId.startsWith('text-')) {
-        console.log("Mobile text ID detected, querying using string ID:", fileId);
+      if (typeof queryFileId === "string" && queryFileId.startsWith("text-")) {
+        console.log(
+          "Mobile text ID detected, querying using string ID:",
+          queryFileId
+        );
         // Need to query by string ID for mobile app-generated IDs
         // Check if we have the mobile text ID in our database
-        const [file] = await db
+        const [fileRecord] = await db
           .select()
           .from(uploadedFiles)
-          .where(eq(uploadedFiles.originalName, fileId))
+          .where(eq(uploadedFiles.originalName, queryFileId))
           .limit(1);
-          
-        if (!file) {
+
+        if (!fileRecord) {
           return NextResponse.json(
             { error: "File not found" },
             { status: 404 }
           );
         }
-        
+
         // Use the numeric ID from the database for subsequent operations
-        queryFileId = file.id;
+        queryFileIdNumber = fileRecord.id;
       } else {
         // Try to convert to number for standard fileIds
-        queryFileId = Number(fileId);
-        
-        if (isNaN(queryFileId)) {
+        queryFileIdNumber = Number(queryFileId);
+
+        if (isNaN(queryFileIdNumber)) {
           return NextResponse.json(
             { error: "Invalid file ID format" },
             { status: 400 }
@@ -323,396 +535,256 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    console.log("Using queryFileId for database operations:", queryFileId);
-    
+
+    console.log(
+      "Using queryFileId for database operations:",
+      queryFileIdNumber
+    );
+
     // Get file record
-    const [file] = await db
+    const [fileRecord] = await db
       .select()
       .from(uploadedFiles)
-      .where(eq(uploadedFiles.id, queryFileId))
+      .where(eq(uploadedFiles.id, queryFileIdNumber))
       .limit(1);
 
-    if (!file) {
-      return NextResponse.json(
-        { error: "File not found" },
-        { status: 404 }
-      );
+    if (!fileRecord) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    if (file.userId !== userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (fileRecord.userId !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Update status to processing
     await db
       .update(uploadedFiles)
       .set({ status: "processing" })
-      .where(eq(uploadedFiles.id, queryFileId));
+      .where(eq(uploadedFiles.id, queryFileIdNumber));
 
     // Get file from Blob storage
-    const response = await fetch(file.blobUrl);
+    const response = await fetch(fileRecord.blobUrl);
     if (!response.ok) {
       throw new Error("Failed to fetch file from storage");
     }
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
+
     // Initialize Mistral client
     const apiKey = process.env.MISTRAL_API_KEY;
     if (!apiKey) {
       throw new Error("Mistral API key is not configured");
     }
     const mistralClient = new Mistral({ apiKey });
-    
+
     // Determine file type and handling approach
-    const fileType = file.fileType.toLowerCase();
-    let textContent: string = '';
-    let tokensUsed: number = 0;
+    const fileType = fileRecord.fileType.toLowerCase();
     let uploadedFile: { id: string } | null = null;
-    let uploadedImage: { id: string } | null = null;
-    let signedUrl: { url: string } | null = null;
-    
+    signedUrl = null;
+
     try {
-      if (fileType === 'application/pdf' || fileType.includes('pdf')) {
-        // For PDFs, use the document OCR processing
-        // 1. Upload file to Mistral
-        uploadedFile = await mistralClient.files.upload({
-          file: {
-            fileName: file.originalName || `file-${queryFileId}.pdf`,
-            // @ts-ignore
-            content: buffer,
-          },
-          // Use our custom type instead of 'any'
-          purpose: "ocr" as FilePurpose
-        });
-        
-        console.log("Uploaded PDF file to Mistral:", uploadedFile.id);
-        
-        // 2. Get signed URL for the uploaded file
-        signedUrl = await mistralClient.files.getSignedUrl({
-          fileId: uploadedFile.id,
-        });
-        
-        console.log("Got signed URL for PDF:", signedUrl.url.substring(0, 50) + "...");
-        
-        // 3. Process the PDF with OCR
-        const ocrResponse = await mistralClient.ocr.process({
-          model: "mistral-ocr-latest",
-          document: {
-            type: "document_url",
-            documentUrl: signedUrl.url,
-          }
-        }) as MistralOCRResponse;
-        
-        console.log("OCR processing complete, extracting text content");
-        console.log("OCR response structure:", JSON.stringify(ocrResponse, null, 2).substring(0, 500) + "...");
-        
-        // 4. Extract text from OCR response with improved handling
-        if (ocrResponse) {
-          // Try to extract from different possible response structures
-          if (ocrResponse.pages && Array.isArray(ocrResponse.pages)) {
-            console.log(`Found ${ocrResponse.pages.length} pages in OCR response`);
-            
-            textContent = ocrResponse.pages.map((page, index) => {
-              console.log(`Processing page ${index + 1}, type: ${typeof page}`);
-              
-              if (typeof page === 'string') {
-                return page;
-              } else if (typeof page === 'object' && page !== null) {
-                // Log available properties on this page object
-                console.log(`Page ${index + 1} properties:`, Object.keys(page));
-                
-                // Check for different property names that might contain text
-                if (page.text) return page.text;
-                if (page.content) return page.content;
-                if (page.markdown) return page.markdown;
-                
-                // Try to stringify the entire object if we couldn't find specific text properties
-                try {
-                  return JSON.stringify(page);
-                } catch (e) {
-                  console.error(`Error stringifying page ${index + 1}:`, e);
-                  return '';
-                }
-              }
-              return '';
-            }).join("\n\n");
-            
-            console.log(`Extracted ${textContent.length} characters of text content`);
-            
-            // Fallback if text is still empty
-            if (!textContent.trim()) {
-              console.log("No text extracted from pages array. Trying alternate approaches.");
-              
-              // Check if there's a simpler text property directly on the response
-              if (ocrResponse.text) {
-                textContent = ocrResponse.text;
-                console.log("Found text directly on OCR response");
-              } else if (typeof ocrResponse === 'string') {
-                textContent = ocrResponse;
-                console.log("OCR response is a string, using directly");
-              } else {
-                // Last resort: stringify the response object, but clean up to extract only text
-                try {
-                  const fullResponseString = JSON.stringify(ocrResponse);
-                  console.log("Using full response string as fallback");
-                  textContent = fullResponseString;
-                } catch (e) {
-                  console.error("Error converting OCR response to string:", e);
-                }
-              }
-            }
-          } else {
-            console.log("OCR response does not have a pages array, structure:", 
-                        typeof ocrResponse, 
-                        Object.keys(ocrResponse));
-            
-            // Try to extract text from other potential response formats
-            if (ocrResponse.text) {
-              textContent = ocrResponse.text;
-            } else if (ocrResponse.content) {
-              textContent = ocrResponse.content;
-            } else if (ocrResponse.markdown) {
-              textContent = ocrResponse.markdown;
-            } else {
-              // Try to stringify response for inspection
-              try {
-                textContent = JSON.stringify(ocrResponse);
-                console.log("Using stringified response:", textContent.substring(0, 100) + "...");
-              } catch (e) {
-                console.error("Error stringifying OCR response:", e);
-                textContent = "Error extracting text from OCR response";
-              }
-            }
-          }
-        } else {
-          console.error("OCR response is null or undefined");
-          textContent = "Error: Could not obtain OCR response";
-        }
-        
-        // 5. Extract token usage information
-        if (ocrResponse?.usageInfo) {
-          if (ocrResponse.usageInfo.totalTokens) {
-            tokensUsed = ocrResponse.usageInfo.totalTokens;
-          } else if (ocrResponse.usageInfo.total_tokens) {
-            tokensUsed = ocrResponse.usageInfo.total_tokens;
-          }
-          console.log("Token usage:", tokensUsed);
-        } else {
-          console.log("No usage info available in OCR response");
-        }
-        
-        // Optional: Delete the uploaded file to clean up
-        // Commented out for now to prevent potential issues
-        /*
+      if (fileType === "application/pdf" || fileType.includes("pdf")) {
+        console.log("Processing PDF file with Mistral OCR");
+
         try {
-          await mistralClient.files.delete({
+          // Upload the PDF file to Mistral
+          uploadedFile = await (
+            mistralClient.files.upload as unknown as (
+              // Ignore the parameter name since we're not using it
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              _: {
+                file: { fileName: string; content: Buffer };
+                purpose: string;
+              }
+            ) => Promise<{ id: string; filename: string; createdAt: string }>
+          )({
+            file: {
+              fileName:
+                fileRecord.originalName || `pdf-${queryFileIdNumber}.pdf`,
+              content: buffer,
+            },
+            purpose: "ocr",
+          });
+
+          console.log("Uploaded PDF file to Mistral:", uploadedFile.id);
+
+          // Get signed URL for the uploaded file
+          signedUrl = await mistralClient.files.getSignedUrl({
             fileId: uploadedFile.id,
           });
-          console.log("Deleted uploaded file from Mistral");
-        } catch (deleteError) {
-          console.error("Failed to delete uploaded file:", deleteError);
-          // Continue processing even if deletion fails
+
+          // Run OCR on the PDF using the signed URL
+          const ocrResponse = await (
+            mistralClient.ocr.process as unknown as (
+              // Ignore the parameter name since we're not using it
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              _: {
+                model: string;
+                document: {
+                  type: string;
+                  documentUrl: string;
+                };
+              }
+            ) => Promise<Record<string, unknown>>
+          )({
+            model: "mistral-ocr-latest",
+            document: {
+              type: "document_url",
+              documentUrl: signedUrl.url,
+            },
+          });
+
+          console.log("OCR processing complete, extracting text content");
+          console.log(
+            "OCR response structure:",
+            JSON.stringify(ocrResponse, null, 2).substring(0, 500) + "..."
+          );
+
+          // Extract text content from OCR response
+          const extractedContent = extractTextFromOCRResponse(
+            ocrResponse as OCRResponse
+          );
+          textContent = extractedContent.textContent;
+          tokensUsed = extractedContent.tokensUsed;
+
+          console.log(
+            `Extracted ${textContent.length} characters, used ${tokensUsed} tokens`
+          );
+        } catch (ocrError) {
+          console.error("Error in PDF OCR processing:", ocrError);
+          textContent = `Error processing PDF: ${
+            ocrError instanceof Error ? ocrError.message : String(ocrError)
+          }`;
         }
-        */
       } else {
         // For images, compress first if needed
         const processedBuffer = await compressImage(buffer, fileType);
-        
-        // 1. Upload image to Mistral
-        uploadedImage = await mistralClient.files.upload({
-          file: {
-            fileName: file.originalName || `image-${queryFileId}.jpg`,
-            // @ts-ignore
-            content: processedBuffer,
-          },
-          purpose: "ocr" as FilePurpose
-        });
-        
-        console.log("Uploaded image file to Mistral:", uploadedImage.id);
-        
-        // 2. Get signed URL for the uploaded image
-        signedUrl = await mistralClient.files.getSignedUrl({
-          fileId: uploadedImage.id,
-        });
-        
-        console.log("Got signed URL for image:", signedUrl.url.substring(0, 50) + "...");
-        
-        // 3. Process the image with OCR
+
+        // For images, use GPT-4o for better OCR
+        console.log("Processing image file with GPT-4o vision capabilities");
+
         try {
-          const ocrResponse = await mistralClient.ocr.process({
-            model: "mistral-ocr-latest",
-            document: {
-              type: "image_url",
-              imageUrl: signedUrl.url,
-            }
-          }) as MistralOCRResponse;
-          
-          console.log("OCR processing complete, extracting text content");
-          console.log("OCR response structure:", JSON.stringify(ocrResponse, null, 2).substring(0, 500) + "...");
-          
-          // 4. Extract text from OCR response with improved handling
-          if (ocrResponse) {
-            // Try to extract from different possible response structures
-            if (ocrResponse.pages && Array.isArray(ocrResponse.pages)) {
-              console.log(`Found ${ocrResponse.pages.length} pages in OCR response`);
-              
-              textContent = ocrResponse.pages.map((page, index) => {
-                console.log(`Processing page ${index + 1}, type: ${typeof page}`);
-                
-                if (typeof page === 'string') {
-                  return page;
-                } else if (typeof page === 'object' && page !== null) {
-                  // Log available properties on this page object
-                  console.log(`Page ${index + 1} properties:`, Object.keys(page));
-                  
-                  // Check for different property names that might contain text
-                  if (page.text) return page.text;
-                  if (page.content) return page.content;
-                  if (page.markdown) return page.markdown;
-                  
-                  // Try to stringify the entire object if we couldn't find specific text properties
-                  try {
-                    return JSON.stringify(page);
-                  } catch (e) {
-                    console.error(`Error stringifying page ${index + 1}:`, e);
-                    return '';
-                  }
-                }
-                return '';
-              }).join("\n\n");
-              
-              console.log(`Extracted ${textContent.length} characters of text content`);
-              
-              // Check if we only got image references instead of actual text
-              if (textContent.trim().startsWith("![") && textContent.includes("](")) {
-                console.log("OCR returned only an image reference instead of extracted text:", textContent);
-                
-                // Fallback to GPT-4o for image processing
-                console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
-                
-                try {
-                  // Use GPT-4o to extract text from the image
-                  textContent = await extractTextWithGPT4o(signedUrl.url);
-                } catch (gptError) {
-                  console.error("GPT-4o fallback also failed:", gptError);
-                  // Keep whatever text we had, even if it's just image references
-                }
-              }
-              
-              // Fallback if text is still empty
-              if (!textContent.trim()) {
-                console.log("No text extracted from pages array. Trying alternate approaches.");
-                
-                // Check if there's a simpler text property directly on the response
-                if (ocrResponse.text) {
-                  textContent = ocrResponse.text;
-                  console.log("Found text directly on OCR response");
-                } else if (typeof ocrResponse === 'string') {
-                  textContent = ocrResponse;
-                  console.log("OCR response is a string, using directly");
-                } else {
-                  // Last resort: stringify the response object, but clean up to extract only text
-                  try {
-                    const fullResponseString = JSON.stringify(ocrResponse);
-                    console.log("Using full response string as fallback");
-                    textContent = fullResponseString;
-                  } catch (e) {
-                    console.error("Error converting OCR response to string:", e);
-                  }
-                }
-              }
-            } else {
-              console.log("OCR response does not have a pages array, structure:", 
-                          typeof ocrResponse, 
-                          Object.keys(ocrResponse));
-              
-              // Try to extract text from other potential response formats
-              if (ocrResponse.text) {
-                textContent = ocrResponse.text;
-              } else if (ocrResponse.content) {
-                textContent = ocrResponse.content;
-              } else if (ocrResponse.markdown) {
-                textContent = ocrResponse.markdown;
-              } else {
-                // Try to stringify response for inspection
-                try {
-                  textContent = JSON.stringify(ocrResponse);
-                  console.log("Using stringified response:", textContent.substring(0, 100) + "...");
-                } catch (e) {
-                  console.error("Error stringifying OCR response:", e);
-                  textContent = "Error extracting text from OCR response";
-                }
-              }
-            }
+          // Check if we already have a blob URL from the uploaded file
+          if (fileRecord.blobUrl) {
+            const imageUrl = fileRecord.blobUrl;
+            console.log(
+              "Using existing blob URL for image:",
+              imageUrl.substring(0, 50) + "..."
+            );
+
+            // Use GPT-4o to process the image
+            const extractedContent = await processImageWithGPT4o(imageUrl);
+            textContent = extractedContent.textContent;
+            tokensUsed = extractedContent.tokensUsed;
           } else {
-            console.error("OCR response is null or undefined");
-            textContent = "Error: Could not obtain OCR response";
+            // If no blob URL exists, we need to create a temporary one or upload the image
+            // This is a fallback case - we should almost always have a blob URL
+            console.log(
+              "No blob URL available for image, falling back to Mistral OCR"
+            );
+
+            // Use a type assertion to work around SDK limitations
+            uploadedImage = await (
+              mistralClient.files.upload as unknown as (
+                // Ignore the parameter name since we're not using it
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                _: {
+                  file: { fileName: string; content: Buffer };
+                  purpose: string;
+                }
+              ) => Promise<{ id: string; filename: string; createdAt: string }>
+            )({
+              file: {
+                fileName:
+                  fileRecord.originalName || `image-${queryFileIdNumber}.jpg`,
+                content: processedBuffer,
+              },
+              purpose: "ocr",
+            });
+
+            console.log("Uploaded image file to Mistral:", uploadedImage.id);
+
+            // Get signed URL for the uploaded image
+            signedUrl = await mistralClient.files.getSignedUrl({
+              fileId: uploadedImage.id,
+            });
+
+            const mistralImageUrl = signedUrl.url;
+            console.log(
+              "Got signed URL for image:",
+              mistralImageUrl.substring(0, 50) + "..."
+            );
+
+            // Use the Mistral API as fallback
+            const ocrResponse = await mistralClient.ocr.process({
+              model: "mistral-ocr-latest",
+              document: {
+                type: "image_url",
+                imageUrl: mistralImageUrl,
+              },
+            });
+
+            console.log("OCR processing complete, extracting text content");
+
+            // Use the helper function to extract text content
+            const extractedContent = extractTextFromOCRResponse(
+              ocrResponse as OCRResponse
+            );
+            textContent = extractedContent.textContent;
+            tokensUsed = extractedContent.tokensUsed;
+
+            // Post-process the text to clean it up
+            if (textContent) {
+              // Remove excessive whitespace
+              textContent = textContent.replace(/\s+/g, " ").trim();
+
+              // Fix common OCR errors
+              textContent = textContent
+                .replace(/(\w)-\s+(\w)/g, "$1$2") // Fix hyphenated words that shouldn't be
+                .replace(/(\d),(\d)/g, "$1.$2") // Fix commas that should be decimal points in numbers
+                .replace(/(\d)\.(\d{3})/g, "$1,$2"); // Fix decimal points that should be commas in numbers
+
+              console.log(
+                "Post-processed text, final length:",
+                textContent.length
+              );
+            }
           }
-          
-          // 5. Extract token usage information
-          if (ocrResponse?.usageInfo) {
-            if (ocrResponse.usageInfo.totalTokens) {
-              tokensUsed = ocrResponse.usageInfo.totalTokens;
-            } else if (ocrResponse.usageInfo.total_tokens) {
-              tokensUsed = ocrResponse.usageInfo.total_tokens;
-            }
-            console.log("Token usage:", tokensUsed);
-          } else {
-            console.log("No usage info available in OCR response");
+
+          // Post-process the text to clean it up
+          if (textContent) {
+            // Remove excessive whitespace
+            textContent = textContent.replace(/\s+/g, " ").trim();
+
+            // Fix common OCR errors
+            textContent = textContent
+              .replace(/(\w)-\s+(\w)/g, "$1$2") // Fix hyphenated words that shouldn't be
+              .replace(/(\d),(\d)/g, "$1.$2") // Fix commas that should be decimal points in numbers
+              .replace(/(\d)\.(\d{3})/g, "$1,$2"); // Fix decimal points that should be commas in numbers
+
+            console.log(
+              "Post-processed text, final length:",
+              textContent.length
+            );
           }
         } catch (ocrError: unknown) {
           console.error("OCR processing error:", ocrError);
-          
-          // Check if the error is related to vision capabilities
-          const errorMessage = typeof ocrError === 'object' && ocrError !== null && 'message' in ocrError 
-            ? String(ocrError.message) 
-            : String(ocrError);
-            
-          if (
-            errorMessage.includes("vision") || 
-            errorMessage.includes("does not have the 'vision' capability") ||
-            errorMessage.includes("image")
-          ) {
-            console.log("Mistral OCR failed due to vision capability limitations, falling back to GPT-4o");
-            
-            try {
-              // Use GPT-4o to extract text from the image
-              textContent = await extractTextWithGPT4o(signedUrl.url);
-            } catch (gptError) {
-              console.error("GPT-4o fallback also failed:", gptError);
-              textContent = "Error extracting text from image. Both OCR services failed.";
-            }
-          } else {
-            textContent = `Error processing image with OCR: ${errorMessage}`;
-          }
-          
-          // Set a default token usage since we don't have actual usage data
+
+          const errorMessage =
+            typeof ocrError === "object" &&
+            ocrError !== null &&
+            "message" in ocrError
+              ? String(ocrError.message)
+              : String(ocrError);
+
+          textContent = `Error processing image with OCR: ${errorMessage}`;
           tokensUsed = 0;
         }
-        
-        // Optional: Delete the uploaded file to clean up
-        // Commented out for now to prevent potential issues
-        /*
-        try {
-          await mistralClient.files.delete({
-            fileId: uploadedImage.id,
-          });
-          console.log("Deleted uploaded file from Mistral");
-        } catch (deleteError) {
-          console.error("Failed to delete uploaded file:", deleteError);
-          // Continue processing even if deletion fails
-        }
-        */
       }
     } catch (ocrError: unknown) {
       const error = ocrError as ProcessingError;
       console.error("Error during OCR processing:", error);
-      
+
       // Update file status to error
       await db
         .update(uploadedFiles)
@@ -721,103 +793,16 @@ export async function POST(request: NextRequest) {
           error: error.message || "OCR processing failed",
           updatedAt: new Date(),
         })
-        .where(eq(uploadedFiles.id, queryFileId));
-      
+        .where(eq(uploadedFiles.id, queryFileIdNumber));
+
       throw error; // Rethrow to be caught by the outer try-catch
     }
 
     // Final check to ensure we have text content
-    if (!textContent || textContent.trim() === '') {
+    if (!textContent || textContent.trim() === "") {
       console.warn("No text content was extracted, using fallback placeholder");
-      textContent = "⚠️ OCR processing completed, but no text could be extracted from this document.";
-    }
-
-    // Check if the textContent only contains markdown image references and not actual text
-    const markdownImagePattern = /^!\[.*?\]\(.*?\)$|^!\[.*?\]$/;
-    if (markdownImagePattern.test(textContent.trim())) {
-      console.warn("OCR returned only an image reference instead of extracted text:", textContent);
-      
-      // If the file is an image, try to process it again with more specific instructions
-      if (fileType.startsWith('image/')) {
-        console.log("Detected image with insufficient OCR results, trying to process with custom instructions");
-        
-        try {
-          // Get the signed URL again if needed
-          let imageUrl = '';
-          if (fileType === 'application/pdf' || fileType.includes('pdf')) {
-            // For PDFs, we should have the signed URL from earlier
-            if (uploadedFile?.id) {
-              const pdfSignedUrl = await mistralClient.files.getSignedUrl({
-                fileId: uploadedFile.id,
-              });
-              imageUrl = pdfSignedUrl.url;
-            }
-          } else {
-            // For images, we should have the signed URL from earlier
-            if (uploadedImage?.id) {
-              const imageSignedUrl = await mistralClient.files.getSignedUrl({
-                fileId: uploadedImage.id,
-              });
-              imageUrl = imageSignedUrl.url;
-            }
-          }
-          
-          if (!imageUrl) {
-            console.warn("No image URL available for chat-based OCR extraction");
-            return;
-          }
-          
-          // Use the correct Mistral API chat method from SDK v1.5.1
-          const chatResponse = await mistralClient.chat.complete({
-            model: "mistral-medium",
-            messages: [
-              {
-                role: "system",
-                content: "You are an OCR assistant. Extract all visible text from the image. Return ONLY the extracted text, nothing else."
-              },
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: "Extract all text from this image. Return ONLY the extracted text content, with no additional explanation or formatting."
-                  },
-                  {
-                    type: "image_url",
-                    imageUrl: imageUrl
-                  }
-                ]
-              }
-            ],
-            temperature: 0.1,
-            maxTokens: 4000
-          });
-          
-          if (chatResponse.choices && chatResponse.choices[0]?.message?.content) {
-            const extractedText = chatResponse.choices[0].message.content;
-            // Check if extractedText is a string before using trim()
-            const trimmedText = typeof extractedText === 'string' ? extractedText.trim() : 
-              (Array.isArray(extractedText) ? extractedText.join(' ').trim() : '');
-              
-            console.log("Successfully extracted text using chat API:", 
-              (typeof trimmedText === 'string' && trimmedText.length > 100) ? 
-                trimmedText.substring(0, 100) + "..." : trimmedText);
-            
-            // Only update if we got meaningful text back
-            if (trimmedText && trimmedText.length > 10 && !markdownImagePattern.test(trimmedText)) {
-              textContent = trimmedText;
-              
-              // Update tokens used
-              if (chatResponse.usage?.totalTokens) {
-                tokensUsed += chatResponse.usage.totalTokens;
-              }
-            }
-          }
-        } catch (chatError) {
-          console.error("Error using chat API for better text extraction:", chatError);
-          // Continue with original result if the chat API fails
-        }
-      }
+      textContent =
+        "⚠️ OCR processing completed, but no text could be extracted from this document.";
     }
 
     // Update database with results
@@ -829,7 +814,7 @@ export async function POST(request: NextRequest) {
         tokensUsed: tokensUsed,
         updatedAt: new Date(),
       })
-      .where(eq(uploadedFiles.id, queryFileId));
+      .where(eq(uploadedFiles.id, queryFileIdNumber));
 
     // Update user's token usage if user management is enabled
     if (process.env.ENABLE_USER_MANAGEMENT === "true") {
@@ -851,25 +836,28 @@ export async function POST(request: NextRequest) {
     console.error("Processing error:", err);
 
     // Update file status to error if we have a fileId
-    if (fileId !== null) {
+    if (queryFileId !== null) {
       try {
         // For error handling, we need to be more careful with the ID
         // since queryFileId might not be defined yet
         let errorQueryFileId: number;
-        
+
         try {
           // Try to parse the fileId to a number for the database operation
-          if (typeof fileId === 'string' && fileId.startsWith('text-')) {
+          if (
+            typeof queryFileId === "string" &&
+            queryFileId.startsWith("text-")
+          ) {
             // We won't try to look up by originalName here as that might fail again
-            console.log("Cannot update error status for text ID:", fileId);
+            console.log("Cannot update error status for text ID:", queryFileId);
             throw new Error("Cannot update text ID status");
           } else {
-            errorQueryFileId = Number(fileId);
+            errorQueryFileId = Number(queryFileId);
             if (isNaN(errorQueryFileId)) {
               throw new Error("Invalid file ID for error status update");
             }
           }
-          
+
           // Only update if we have a valid numeric ID
           await db
             .update(uploadedFiles)
