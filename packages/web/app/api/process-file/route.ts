@@ -259,7 +259,6 @@ async function processImageWithGPT4o(
   try {
     console.log("Processing image with GPT-4o...");
 
-  
     // Call the vision API with GPT-4o
     // use generateObject from vercel ai sdk
 
@@ -269,17 +268,18 @@ async function processImageWithGPT4o(
 
     const { object } = await generateObject({
       model: openai("gpt-4o"),
-      prompt:
-        "Extract all text from this image. Be comprehensive and maintain original formatting where possible.",
       schema: z.object({
         markdown: z.string(),
       }),
       messages: [
         {
+          role: "system",
+          content:
+            "Extract all text from this image. Be comprehensive and maintain original formatting where possible.",
+        },
+        {
           role: "user",
-          content: [
-            { type: "image", image: imageUrl },
-          ],
+          content: [{ type: "image", image: imageUrl }],
         },
       ],
     });
