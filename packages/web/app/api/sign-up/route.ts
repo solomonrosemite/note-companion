@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clerkClient, auth } from "@clerk/nextjs/server";
 import { createLicenseKeyFromUserId } from "@/app/actions";
-import { createEmptyUserUsage } from "@/drizzle/schema";
+import { createEmptyUserUsage, initializeTierConfig } from "@/drizzle/schema";
 
 export async function POST(req: NextRequest) {
   try {
+    // Initialize tier configurations if they don't exist
+    await initializeTierConfig();
+    
     // For development mode, we'll use the current auth session if available
     const authResult = await auth();
     const userId = authResult.userId;
@@ -13,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV === 'development' && userId) {
       const { key } = await createLicenseKeyFromUserId(userId);
       
-      // Create empty usage for this user if needed
+      // Create empty usage for this user if needed - initialized with free tier
       await createEmptyUserUsage(userId);
       
       return NextResponse.json({

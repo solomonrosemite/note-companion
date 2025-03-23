@@ -1,8 +1,9 @@
 import { clerkClient, auth } from "@clerk/nextjs/server";
 import { verifyKey } from "@unkey/api";
 import { NextRequest } from "next/server";
-import { checkTokenUsage, checkUserSubscriptionStatus } from "../drizzle/schema";
+import { checkTokenUsage, checkUserSubscriptionStatus, createEmptyUserUsage, UserUsageTable, db, initializeTierConfig } from "../drizzle/schema";
 import PostHogClient from "./posthog";
+import { eq } from "drizzle-orm";
 
 /**
  * @deprecated This function is being deprecated in favor of a new authorization method.
@@ -65,6 +66,47 @@ export const getToken = (req: NextRequest) => {
   return token;
 };
 
+// Make sure tier configurations exist
+let tierConfigInitialized = false;
+async function ensureTierConfigExists(): Promise<void> {
+  if (tierConfigInitialized) return;
+  
+  try {
+    await initializeTierConfig();
+    tierConfigInitialized = true;
+    console.log("Tier configuration initialized");
+  } catch (error) {
+    console.error("Error initializing tier configuration:", error);
+  }
+}
+
+// Helper function to check if user exists and initialize if not
+async function ensureUserExists(userId: string): Promise<boolean> {
+  try {
+    // Make sure tier configuration exists first
+    await ensureTierConfigExists();
+    
+    // Check if user exists in the database
+    const userUsage = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+    
+    // If no user record exists, create one with free tier
+    if (!userUsage.length) {
+      console.log(`User ${userId} not found in database, initializing with free tier`);
+      await createEmptyUserUsage(userId);
+      return true;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error ensuring user exists:", error);
+    return false;
+  }
+}
+
 export async function handleAuthorizationV2(req: NextRequest) {
   // this is to allow people to self host it easily without
   // setting up clerk
@@ -80,11 +122,29 @@ export async function handleAuthorizationV2(req: NextRequest) {
       if (result.valid) {
         // API key is valid
         console.log("API key authentication successful");
+        
+        // Ensure user exists in database
+        await ensureUserExists(result.ownerId);
+        
         // Check subscription status
         const isActive = await checkUserSubscriptionStatus(result.ownerId);
         if (!isActive) {
           throw new AuthorizationError("Subscription canceled or inactive", 403);
         }
+        
+        // Check token usage
+        const { remaining, usageError } = await checkTokenUsage(result.ownerId);
+        if (usageError) {
+          throw new AuthorizationError("Error checking token usage", 500);
+        }
+        
+        if (remaining <= 0) {
+          throw new AuthorizationError(
+            "Token limit exceeded. Please upgrade your plan for more tokens.",
+            429
+          );
+        }
+        
         // Might require await
         handleLoggingV2(req, result.ownerId);
         return { userId: result.ownerId };
@@ -100,11 +160,29 @@ export async function handleAuthorizationV2(req: NextRequest) {
     const { userId } = await auth();
     if (userId) {
       console.log("Clerk authentication successful");
+      
+      // Ensure user exists in database
+      await ensureUserExists(userId);
+      
       // Check subscription status
       const isActive = await checkUserSubscriptionStatus(userId);
       if (!isActive) {
         throw new AuthorizationError("Subscription canceled or inactive", 403);
       }
+      
+      // Check token usage
+      const { remaining, usageError } = await checkTokenUsage(userId);
+      if (usageError) {
+        throw new AuthorizationError("Error checking token usage", 500);
+      }
+      
+      if (remaining <= 0) {
+        throw new AuthorizationError(
+          "Token limit exceeded. Please upgrade your plan for more tokens.",
+          429
+        );
+      }
+      
       handleLoggingV2(req, userId);
       return { userId };
     }

@@ -12,7 +12,7 @@ interface BrowserWindowProps extends PropsWithChildren {
 export const BrowserWindow: FC<BrowserWindowProps> = ({ children, className = "" }) => {
 
   return (
-    <div className={`rounded-lg overflow-hidden shadow-xl border border-gray-600 shadow-gray-900 ${className}`}>
+    <div className={`rounded-lg overflow-hidden border border-gray-600 shadow-gray-900 ${className}`}>
       <div className="p-2 flex items-center">
         <div className="flex space-x-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>

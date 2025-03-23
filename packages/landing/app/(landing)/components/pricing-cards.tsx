@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Star } from "lucide-react";
 import Link from 'next/link';
 import { Switch } from "@/components/ui/switch";
 
@@ -11,6 +11,19 @@ export function PricingCards() {
   const [isYearly, setIsYearly] = useState(false);
 
   const plans = {
+    freeTier: {
+      name: "Free Tier",
+      price: "Free",
+      features: [
+        "Limited to 100,000 tokens",
+        "Process up to ~30 files per month",
+        "Limited audio transcription (10 min)",
+        "Basic support",
+        "No credit card required",
+      ],
+      buttonText: "Sign Up Free",
+      buttonVariant: "outline" as const,
+    },
     selfHosted: {
       name: "Self-hosted",
       price: "Free",
@@ -48,21 +61,64 @@ export function PricingCards() {
         "Pay-as-you-go with your own API keys",
         "Privacy-focused",
         "Unlimited usage",
-
-
         "Early access features",
         "Premium support",
         "Onboarding call with a co-founder (on request)",
         "30 days money-back guarantee",
- 
       ],
       buttonText: "Get Lifetime Access",
       buttonVariant: "outline" as const,
     },
   };
 
+  // Helper function to render a feature with optional highlighting
+  const renderFeature = (feature: string, index: number, plan: string) => {
+    const isKeyFeature = index === 0 || 
+                         feature.toLowerCase().includes("token") || 
+                         feature.toLowerCase().includes("no credit") ||
+                         feature.toLowerCase().includes("free");
+    
+    return (
+      <div key={index} className="flex items-start gap-3">
+        {plan === 'freeTier' && isKeyFeature ? (
+          <Star className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+        ) : (
+          <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        )}
+        <span className="text-muted-foreground">{feature}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto px-4">
+      {/* Free Tier */}
+      <div className="relative group h-full">
+        <div className="absolute -inset-0.5 border border-2 border-amber-500 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 group-hover:from-amber-500/40 group-hover:via-amber-500/25 group-hover:to-amber-500/40 transition-all duration-300" />
+        <div className="relative h-full rounded-2xl bg-background/100 backdrop-blur-sm p-6 flex flex-col justify-between">
+          <div>
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+              <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
+                New!
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-semibold mb-4">Free Tier</h3>
+            <div className="h-[88px] flex flex-col justify-end mb-8">
+              <span className="text-4xl font-bold">$0</span>
+              <span className="text-muted-foreground ml-1">/forever</span>
+            </div>
+            <div className="space-y-3 mb-8">
+              {plans.freeTier.features.map((feature, index) => renderFeature(feature, index, 'freeTier'))}
+            </div>
+          </div>
+          <Link href="https://accounts.notecompanion.ai/sign-up" passHref>
+            <Button variant="outline" className="w-full">
+              Sign Up Free
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Self-Hosted */}
       <div className="relative group h-full">
       <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary/40 group-hover:via-primary/25 group-hover:to-primary/40 transition-all duration-300" />

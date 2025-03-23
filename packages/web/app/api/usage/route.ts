@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
         maxTokenUsage: UserUsageTable.maxTokenUsage,
         subscriptionStatus: UserUsageTable.subscriptionStatus,
         currentPlan: UserUsageTable.currentPlan,
+        tier: UserUsageTable.tier,
       })
       .from(UserUsageTable)
       .where(and(eq(UserUsageTable.userId, userId)))

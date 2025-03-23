@@ -28,14 +28,15 @@ export type SubscriptionWebhookEvent =
   | "subscription_schedule.updated";
 
 // Product and plan types for type safety
-export type ProductType = "subscription" | "lifetime" | "top_up";
+export type ProductType = "subscription" | "lifetime" | "top_up" | "free";
 export type Plan =
   | "monthly"
   | "yearly"
   | "lifetime_license"
   | "one_year_license"
-  | "top_up";
-export type PlanType = "subscription" | "pay-once";
+  | "top_up"
+  | "free";
+export type PlanType = "subscription" | "pay-once" | "free";
 
 // Pricing configuration
 export const PRICES = {
@@ -44,7 +45,16 @@ export const PRICES = {
   LIFETIME: 30000, // $300.00
   ONE_YEAR: 20000, // $200.00
   TOP_UP: 1500, // $15.00
+  FREE: 0, // $0.00
 } as const;
+
+const freeFeatures = [
+  "Limited to 100,000 tokens",
+  "Process up to ~30 files per month",
+  "Limited audio transcription (10 min)",
+  "Basic support",
+  "No credit card required",
+];
 
 const cloudFeatures = [
   "No external AI credits needed",
@@ -64,7 +74,6 @@ const standardPayOnceFeatures = [
   "Premium support",
   "Onboarding call with one of the founders (on request)",
   "30 days money-back guarantee",
-
 ];
 
 export interface ProductMetadata {
@@ -74,6 +83,21 @@ export interface ProductMetadata {
 
 // Product metadata configuration
 export const PRODUCTS = {
+  FreeTier: {
+    name: "Note Companion - Free",
+    metadata: {
+      type: "free" as PlanType,
+      plan: "free" as Plan,
+    },
+    prices: {
+      free: {
+        amount: PRICES.FREE,
+        type: "free" as const,
+        interval: "unlimited" as const,
+      },
+    },
+    features: freeFeatures,
+  },
   SubscriptionMonthly: {
     name: "Note Companion - Cloud",
     metadata: {
@@ -162,12 +186,19 @@ export const getTargetUrl = () => {
 };
 
 // Helper to validate webhook metadata
-export const validateWebhookMetadata = (metadata: any) => {
-  if (!metadata?.userId) {
+export const validateWebhookMetadata = (metadata: unknown): metadata is WebhookMetadata => {
+  if (!metadata || typeof metadata !== 'object') {
+    console.warn("Invalid metadata object");
+    return false;
+  }
+  
+  const metadataObj = metadata as Record<string, unknown>;
+  
+  if (!metadataObj.userId) {
     console.warn("Missing userId in webhook metadata");
     return false;
   }
-  if (!metadata?.type) {
+  if (!metadataObj.type) {
     console.warn("Missing type in webhook metadata");
     return false;
   }

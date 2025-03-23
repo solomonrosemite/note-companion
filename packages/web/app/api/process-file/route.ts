@@ -9,6 +9,7 @@ import { OpenAI } from "openai";
 import { generateObject } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
+import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 
 export const maxDuration = 60; // 1 minute (maximum allowed for hobby plan)
 
@@ -322,9 +323,30 @@ export async function POST(request: NextRequest) {
   let signedUrl: { url: string } | null = null;
 
   try {
-    // Check authentication first
+    // Check authentication first using the V2 authorization handler
     console.log("API: Received request to process file");
-    const { userId } = await auth();
+    
+    let userId;
+    try {
+      const authResult = await handleAuthorizationV2(request);
+      userId = authResult.userId;
+    } catch (authError: unknown) {
+      console.error("Authorization error:", authError);
+      // Type guard to safely extract error properties
+      const status = authError && typeof authError === 'object' && 'status' in authError 
+        ? (authError.status as number) 
+        : 401;
+      
+      const message = authError && typeof authError === 'object' && 'message' in authError
+        ? String(authError.message)
+        : "Unauthorized";
+        
+      return NextResponse.json(
+        { error: message },
+        { status }
+      );
+    }
+    
     const authHeader = request.headers.get("authorization");
     const payload = (await request.json()) as { fileId: number | string };
     queryFileId = payload.fileId;
@@ -332,155 +354,9 @@ export async function POST(request: NextRequest) {
     // Log the received fileId for debugging
     console.log("Processing file ID:", queryFileId);
 
-    // Handle API key auth from mobile app
-    if (!userId && authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-
-      if (!token) {
-        console.error("Unauthorized process attempt - invalid token");
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
-      // For mobile requests with a token, we need to validate the token
-      // Extract userId from token for mobile auth
-      let tokenUserId = null;
-
-      try {
-        // Log token for debugging
-        console.log("Processing mobile token:", token.substring(0, 20) + "...");
-
-        // Basic JWT structure check
-        const parts = token.split(".");
-        if (parts.length === 3) {
-          // This is likely a JWT - try to decode the payload
-          // Add proper base64 padding if needed
-          let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-          while (base64.length % 4) {
-            base64 += "=";
-          }
-
-          const payload = JSON.parse(
-            Buffer.from(base64, "base64").toString()
-          ) as {
-            sub?: string;
-            userId?: string;
-            user_id?: string;
-            [key: string]: unknown; // Use unknown instead of any
-          };
-          console.log("Decoded token payload:", JSON.stringify(payload));
-
-          // Check for user ID in different possible claims
-          if (payload.sub) {
-            tokenUserId = payload.sub;
-            console.log("Extracted userId from sub claim:", tokenUserId);
-          } else if (payload.userId) {
-            tokenUserId = payload.userId;
-            console.log("Extracted userId from userId claim:", tokenUserId);
-          } else if (payload.user_id) {
-            tokenUserId = payload.user_id;
-            console.log("Extracted userId from user_id claim:", tokenUserId);
-          }
-        }
-      } catch (parseError) {
-        console.error("Error parsing token:", parseError);
-        return NextResponse.json(
-          { error: "Invalid token format" },
-          { status: 401 }
-        );
-      }
-
-      // Continue with file processing for mobile
-      if (!queryFileId) {
-        return NextResponse.json(
-          { error: "File ID is required" },
-          { status: 400 }
-        );
-      }
-
-      // Convert fileId to number if possible for database query
-      let queryFileIdNumber: number;
-      try {
-        if (
-          typeof queryFileId === "string" &&
-          queryFileId.startsWith("text-")
-        ) {
-          console.log(
-            "Mobile text ID detected, querying using string ID:",
-            queryFileId
-          );
-          // Need to query by string ID for mobile app-generated IDs
-          // Check if we have the mobile text ID in our database
-          const [fileRecord] = await db
-            .select()
-            .from(uploadedFiles)
-            .where(eq(uploadedFiles.originalName, queryFileId))
-            .limit(1);
-
-          if (!fileRecord) {
-            return NextResponse.json(
-              { error: "File not found" },
-              { status: 404 }
-            );
-          }
-
-          // Use the numeric ID from the database for subsequent operations
-          queryFileIdNumber = fileRecord.id;
-        } else {
-          // Try to convert to number for standard fileIds
-          queryFileIdNumber = Number(queryFileId);
-
-          if (isNaN(queryFileIdNumber)) {
-            return NextResponse.json(
-              { error: "Invalid file ID format" },
-              { status: 400 }
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error converting fileId:", error);
-        return NextResponse.json(
-          { error: "Invalid file ID format" },
-          { status: 400 }
-        );
-      }
-
-      console.log(
-        "Using queryFileId for database operations:",
-        queryFileIdNumber
-      );
-
-      // Get the file record
-      const [fileRecord] = await db
-        .select()
-        .from(uploadedFiles)
-        .where(eq(uploadedFiles.id, queryFileIdNumber))
-        .limit(1);
-
-      if (!fileRecord) {
-        return NextResponse.json({ error: "File not found" }, { status: 404 });
-      }
-
-      // For debugging only - log user IDs but don't reject yet
-      if (tokenUserId && fileRecord.userId !== tokenUserId) {
-        console.log(
-          `Notice: File userId (${fileRecord.userId}) doesn't match token userId (${tokenUserId}), but allowing for testing`
-        );
-        // We'll temporarily allow access even if the user IDs don't match
-        // return NextResponse.json(
-        //   { error: "Unauthorized" },
-        //   { status: 401 }
-        // );
-      }
-
-      // Update the file status to processing
-      await db
-        .update(uploadedFiles)
-        .set({ status: "processing" })
-        .where(eq(uploadedFiles.id, queryFileIdNumber));
-
-      // Return success response
-      return NextResponse.json({ success: true });
-    } else if (!userId) {
+    // Handle API key auth from mobile app - this is now handled in handleAuthorizationV2
+    if (!userId) {
+      console.error("Unauthorized process attempt - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -816,15 +692,25 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(uploadedFiles.id, queryFileIdNumber));
 
-    // Update user's token usage if user management is enabled
-    if (process.env.ENABLE_USER_MANAGEMENT === "true") {
-      console.log("Incrementing token usage for user:", userId, tokensUsed);
-      try {
-        await incrementAndLogTokenUsage(userId, tokensUsed);
-      } catch (error) {
-        console.error("Error updating token usage:", error);
-        // Continue processing - don't fail the request if token tracking fails
+    // Update user's token usage
+    console.log("Incrementing token usage for user:", userId, tokensUsed);
+    try {
+      const usageResult = await incrementAndLogTokenUsage(userId, tokensUsed);
+      
+      // Check if user has reached token limit
+      if (usageResult.needsUpgrade) {
+        console.log(`User ${userId} has reached their token limit`);
+        // We still return success for this request since the file was processed
+        return NextResponse.json({
+          success: true,
+          text: textContent,
+          needsUpgrade: true,
+          remainingTokens: usageResult.remaining,
+        });
       }
+    } catch (error) {
+      console.error("Error updating token usage:", error);
+      // Continue processing - don't fail the request if token tracking fails
     }
 
     return NextResponse.json({

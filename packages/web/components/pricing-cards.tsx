@@ -63,6 +63,67 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
     }
   };
 
+  // Render the free tier card
+  const renderFreeTierCard = () => {
+    const product = config.products.FreeTier;
+    
+    return (
+      <Card className="p-6 rounded-xl flex-1 relative shadow-md transition-all hover:shadow-lg bg-white border-slate-300 border">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col">
+            <div>
+              <div className="flex items-center mb-2">
+                <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
+              </div>
+              <CardDescription className="text-3xl font-bold text-black mt-3 mb-3">
+                $0
+                <span className="text-sm font-normal text-gray-500 ml-1">
+                  /forever
+                </span>
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 pb-6">
+          <ul className="space-y-3">
+            {product.features.map((feature: string, index: number) => {
+              const isKeyFeature = index === 0 || 
+                                   feature.toLowerCase().includes("token") || 
+                                   feature.toLowerCase().includes("no credit");
+              
+              return (
+                <li key={index} className="flex items-start text-sm">
+                  {isKeyFeature ? (
+                    <Star className="h-5 w-5 mr-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <span className={isKeyFeature ? 'text-gray-800 font-medium' : 'text-gray-700'}>
+                    {feature}
+                    {isKeyFeature && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Free Tier
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+        <CardFooter>
+          <Button
+            className="w-full py-6 text-base font-medium transition-all cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-900 border-none shadow-md hover:shadow-lg"
+            variant="outline"
+            onClick={() => window.location.href = "/sign-up"}
+          >
+            Sign Up Free
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  };
+
   const renderPlanCard = (planType: "subscription" | "lifetime") => {
     const isSubscription = planType === "subscription";
     const planKey = isSubscription
@@ -210,6 +271,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
   return (
     <div className="mx-auto">
       <div className="flex flex-col md:flex-row gap-8">
+        {renderFreeTierCard()}
         {renderPlanCard("subscription")}
         {renderPlanCard("lifetime")}
       </div>

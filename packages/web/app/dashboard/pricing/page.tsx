@@ -12,8 +12,11 @@ export default function PlanSelectionPage() {
           Pricing Plans
         </h1>
         <p className="text-slate-600 max-w-2xl">
-          Choose the plan that best fits your needs. All plans include our core features with different levels of access and usage limits.
+          Start with our free tier or choose a plan that best fits your needs. All plans include our core features with different levels of access and usage limits. No credit card required to get started.
         </p>
+        <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+          New! Free tier now available
+        </div>
       </div>
       
       {/* Key Features Section */}
