@@ -280,7 +280,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">Now in Beta</h3>
                 <p className="text-sm text-muted-foreground">
-                  Our redesigned mobile app is now available for iOS. Capture
+                  The Note Companion mobile app is now available for iOS. Capture
                   notes, screenshots, and sync them directly to your vault with
                   ease.
                 </p>
