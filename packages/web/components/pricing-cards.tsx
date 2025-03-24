@@ -96,11 +96,6 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
                   <Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
                   <span className={isKeyFeature ? 'text-gray-800 font-medium' : 'text-gray-700'}>
                     {feature}
-                    {isKeyFeature && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                        Free Tier
-                      </span>
-                    )}
                   </span>
                 </li>
               );
