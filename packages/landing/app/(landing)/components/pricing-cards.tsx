@@ -33,7 +33,7 @@ export function PricingCards() {
         "Community support",
         "Source code access",
       ],
-      buttonText: "Get Started",
+      buttonText: "See Github",
       buttonVariant: "outline" as const,
     },
     subscription: {
@@ -130,7 +130,7 @@ export function PricingCards() {
           </div>
           <Link href="https://github.com/different-ai/file-organizer-2000" passHref>
             <Button variant="outline" className="w-full">
-              Get Started
+              See Github
             </Button>
           </Link>
         </div>

@@ -93,11 +93,7 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
               
               return (
                 <li key={index} className="flex items-start text-sm">
-                  {isKeyFeature ? (
-                    <Star className="h-5 w-5 mr-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
-                  )}
+                  <Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
                   <span className={isKeyFeature ? 'text-gray-800 font-medium' : 'text-gray-700'}>
                     {feature}
                     {isKeyFeature && (
