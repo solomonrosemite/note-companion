@@ -244,7 +244,7 @@ export default function DashboardPage() {
                     <span className="text-sm font-medium">Next Reset</span>
                   </div>
                   <p className="text-xl font-bold">
-                    {apiUsage.nextReset || "Apr 12"}
+                    {apiUsage.nextReset || "April 1"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Usage resets on this date
