@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Check, Sparkles, Star } from "lucide-react";
+import { Check, Sparkles, Star, Info } from "lucide-react";
 import { config } from "@/srm.config";
 import { twMerge } from "tailwind-merge";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +28,24 @@ interface PricingCardsProps {
 export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
   const [isYearly, setIsYearly] = useState(false);
   const [isLifetime, setIsLifetime] = useState(false);
+
+  // Add this text module before the pricing cards
+  const renderFreeInfoText = () => {
+    return (
+      <div className="text-center mb-6 p-4 bg-slate-50 rounded-lg">
+        <p className="text-slate-700 flex items-center justify-center gap-2 flex-wrap">
+          <Info className="h-5 w-5 text-slate-500" />
+          To activate your free plan, simply enter your email and password in the General tab of{" "}
+          <a 
+            href="obsidian://show-plugin?id=fileorganizer2000" 
+            className=" hover:text-violet-700 underline"
+          >
+           the Obsidian plugin
+          </a>
+        </p>
+      </div>
+    );
+  };
 
   const handlePlanSelection = async (planKey: string) => {
     try {
@@ -250,9 +268,9 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
               )
             }
           >
-            {isSubscription
+              {isSubscription
               ? "Get Started"
-              : `Get ${isLifetime ? "Lifetime" : "One Year"} Access`}
+              : "Get Lifetime"}
           </Button>
         </CardFooter>
       </Card>
@@ -261,8 +279,9 @@ export function PricingCards({ onSubscriptionComplete }: PricingCardsProps) {
 
   return (
     <div className="mx-auto">
+      {renderFreeInfoText()}
       <div className="flex flex-col md:flex-row gap-8">
-        {renderFreeTierCard()}
+        {/* {renderFreeTierCard()} */}
         {renderPlanCard("subscription")}
         {renderPlanCard("lifetime")}
       </div>
