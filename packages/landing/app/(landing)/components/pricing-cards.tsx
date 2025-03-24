@@ -73,18 +73,9 @@ export function PricingCards() {
 
   // Helper function to render a feature with optional highlighting
   const renderFeature = (feature: string, index: number, plan: string) => {
-    const isKeyFeature = index === 0 || 
-                         feature.toLowerCase().includes("token") || 
-                         feature.toLowerCase().includes("no credit") ||
-                         feature.toLowerCase().includes("free");
-    
     return (
       <div key={index} className="flex items-start gap-3">
-        {plan === 'freeTier' && isKeyFeature ? (
-          <Star className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-        ) : (
-          <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-        )}
+        <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <span className="text-muted-foreground">{feature}</span>
       </div>
     );
@@ -94,7 +85,7 @@ export function PricingCards() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto px-4">
       {/* Free Tier */}
       <div className="relative group h-full">
-        <div className="absolute -inset-0.5 border border-2 border-amber-500 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 group-hover:from-amber-500/40 group-hover:via-amber-500/25 group-hover:to-amber-500/40 transition-all duration-300" />
+        <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary/40 group-hover:via-primary/25 group-hover:to-primary/40 transition-all duration-300" />
         <div className="relative h-full rounded-2xl bg-background/100 backdrop-blur-sm p-6 flex flex-col justify-between">
           <div>
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
