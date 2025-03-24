@@ -166,7 +166,6 @@ export default function DashboardPage() {
     <div className="flex-1 space-y-6 p-6 pt-6 bg-white">
       <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
             Welcome to Note Companion - your centralized note management hub.
           </p>
@@ -270,7 +269,7 @@ export default function DashboardPage() {
         <Card className="col-span-1">
           <CardHeader className="pb-2">
             <CardTitle>Note Companion Mobile</CardTitle>
-            <CardDescription>Our brand new mobile experience</CardDescription>
+            {/* <CardDescription>Our brand new mobile experience</CardDescription> */}
           </CardHeader>
           <CardContent className="pt-2">
             <div className="flex items-start gap-4">
