@@ -1,6 +1,4 @@
 import { ClerkProvider, SignedIn, SignedOut, SignIn, UserButton } from "@clerk/nextjs";
-import { currentUser } from '@clerk/nextjs/server'
-import { FlowgladProvider } from '@flowglad/nextjs'
 import type { Metadata } from "next";
 import { PHProvider } from "./providers";
 import Logo from "@/components/ui/logo";
@@ -16,51 +14,47 @@ export const metadata: Metadata = {
   description: "Manage your account",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await currentUser()
-
   return process.env.ENABLE_USER_MANAGEMENT == "true" ? (
     <ClerkProvider afterSignOutUrl="/sign-in">
       <html lang="en" className="light">
         <PHProvider>
-          <FlowgladProvider loadBilling={!!user}>
-            <SignedIn>
-              <body className="light">
-                <Toaster />
-                <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
-                  <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
-                    <div className="flex items-center space-x-6">
-                      <Link href="/" className="flex-shrink-0">
-                        <Logo />
-                      </Link>
-                      <NavigationBar />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ExtraUserSettings />
-                      <UserButton />
-                    </div>
-                  </nav>
-                </header>
-                <main className="min-h-screen text-stone-900 font-sans">
-                  {children}
-                </main>
-              </body>
-            </SignedIn>
-            <SignedOut>
-              <body className="light">
-                <Toaster />
-                <main className="min-h-screen text-stone-900 font-sans">
-                  <div className="flex items-center justify-center h-screen">
-                    <SignIn />
+          <SignedIn>
+            <body className="light">
+              <Toaster />
+              <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
+                <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
+                  <div className="flex items-center space-x-6">
+                    <Link href="/" className="flex-shrink-0">
+                      <Logo />
+                    </Link>
+                    <NavigationBar />
                   </div>
-                </main>
-              </body>
-            </SignedOut>
-          </FlowgladProvider>
+                  <div className="flex items-center gap-2">
+                    <ExtraUserSettings />
+                    <UserButton />
+                  </div>
+                </nav>
+              </header>
+              <main className="min-h-screen text-stone-900 font-sans">
+                {children}
+              </main>
+            </body>
+          </SignedIn>
+          <SignedOut>
+            <body className="light">
+              <Toaster />
+              <main className="min-h-screen text-stone-900 font-sans">
+                <div className="flex items-center justify-center h-screen">
+                  <SignIn />
+                </div>
+              </main>
+            </body>
+          </SignedOut>
         </PHProvider>
       </html>
     </ClerkProvider>

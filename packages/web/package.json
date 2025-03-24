@@ -25,7 +25,6 @@
     "@ai-sdk/mistral": "^1.1.15",
     "@ai-sdk/openai": "^1.2.2",
     "@clerk/nextjs": "^6.9.6",
-    "@flowglad/nextjs": "^0.8.9",
     "@hookform/resolvers": "^3.9.1",
     "@mistralai/mistralai": "^1.5.2",
     "@radix-ui/react-dialog": "^1.1.6",
