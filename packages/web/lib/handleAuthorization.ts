@@ -53,12 +53,14 @@ async function handleLoggingV2(
 class AuthorizationError extends Error {
   status: number;
   isTokenLimitError?: boolean;
+  userId?: string;
 
-  constructor(message: string, status: number, isTokenLimitError: boolean = false) {
+  constructor(message: string, status: number, isTokenLimitError: boolean = false, userId?: string) {
     super(message);
     this.name = "AuthorizationError";
     this.status = status;
     this.isTokenLimitError = isTokenLimitError;
+    this.userId = userId;
   }
 }
 
@@ -144,7 +146,8 @@ export async function handleAuthorizationV2(req: NextRequest) {
           throw new AuthorizationError(
             "Token limit exceeded. Please upgrade your plan for more tokens.",
             429,
-            true // Mark as token limit error
+            true, // Mark as token limit error
+            userId // Include userId so we can still fetch usage data
           );
         }
         
@@ -183,7 +186,8 @@ export async function handleAuthorizationV2(req: NextRequest) {
         throw new AuthorizationError(
           "Token limit exceeded. Please upgrade your plan for more tokens.",
           429,
-          true // Mark as token limit error
+          true, // Mark as token limit error
+          userId // Include userId so we can still fetch usage data
         );
       }
       
@@ -244,7 +248,8 @@ export async function handleAuthorization(req: NextRequest) {
     throw new AuthorizationError(
       "Credits limit exceeded. Top up your credits in settings.",
       429,
-      true // Mark as token limit error
+      true, // Mark as token limit error
+      userId // Include userId so we can still fetch usage data
     );
   }
 
