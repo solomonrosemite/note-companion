@@ -8,6 +8,8 @@ import { AccountData } from './account-data';
 
 interface GeneralTabProps {
   plugin: FileOrganizer;
+  userId?: string;
+  email?: string;
 }
 
 interface UsageData {
@@ -17,9 +19,9 @@ interface UsageData {
   currentPlan: string;
 }
 
-export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email }) => {
+export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin }) => {
   const [licenseKey, setLicenseKey] = useState(plugin.settings.API_KEY);
-  const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | 'checking' | 'idle'>(
+  const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | 'overLimit' | 'checking' | 'idle'>(
     plugin.settings.API_KEY ? 'checking' : 'idle'
   );
 
@@ -33,8 +35,20 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const checkLicenseStatus = async () => {
     if (!licenseKey) return;
     setKeyStatus('checking');
-    const isValid = await plugin.isLicenseKeyValid(licenseKey);
-    setKeyStatus(isValid ? 'valid' : 'invalid');
+    
+    // Now returns { valid, overLimit }
+    const { valid, overLimit } = await plugin.isLicenseKeyValid(licenseKey);
+
+    if (!valid) {
+      // The key is actually invalid (401, 403, etc.)
+      setKeyStatus('invalid');
+    } else if (overLimit) {
+      // The key is valid, but usage is over limit
+      setKeyStatus('overLimit');
+    } else {
+      // The key is valid and not over limit
+      setKeyStatus('valid');
+    }
   };
 
   const handleLicenseKeyChange = async (value: string) => {
@@ -68,6 +82,23 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             Invalid license key
           </div>
         );
+      case 'overLimit':
+        return (
+          <div className="flex flex-col gap-2 text-[--text-warning] text-sm">
+            <div className="flex items-center">
+              <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              You have reached your token limit
+            </div>
+            <button
+              onClick={() => window.open(`${plugin.getServerUrl()}/onboarding`, '_blank')}
+              className="bg-[--interactive-accent] text-[--text-on-accent] px-3 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
+            >
+              Upgrade Plan
+            </button>
+          </div>
+        );
       case 'checking':
         return (
           <div className="flex items-center text-[--text-muted] text-sm">
@@ -98,9 +129,12 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             <div className="flex gap-2">
               <input
                 type="text"
-                className={`flex-1 bg-[--background-primary] border rounded px-3 py-1.5 ${keyStatus === 'valid' ? 'border-[--text-success]' : 
-                  keyStatus === 'invalid' ? 'border-[--text-error]' : 
-                  'border-[--background-modifier-border]'}`}
+                className={`flex-1 bg-[--background-primary] border rounded px-3 py-1.5 ${
+                  keyStatus === 'valid' ? 'border-[--text-success]' : 
+                  keyStatus === 'invalid' ? 'border-[--text-error]' :
+                  keyStatus === 'overLimit' ? 'border-[--text-warning]' :
+                  'border-[--background-modifier-border]'
+                }`}
                 placeholder="Enter your File Organizer License Key"
                 value={licenseKey}
                 onChange={e => handleLicenseKeyChange(e.target.value)}

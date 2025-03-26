@@ -34,6 +34,11 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
   const [error, setError] = useState('');
   const [isDevMode, setIsDevMode] = useState(false);
   const [devTokens, setDevTokens] = useState('1000000');
+  const [isOverLimit, setIsOverLimit] = useState(false);
+  const [customTokens, setCustomTokens] = useState(0);
+  const [customMaxTokens, setCustomMaxTokens] = useState(0);
+  const [skipAutoFetch, setSkipAutoFetch] = useState(false);
+  const [isSimulationActive, setIsSimulationActive] = useState(false);
 
   useEffect(() => {
     // Check if in development mode
@@ -49,39 +54,136 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
     };
     
     checkDevMode();
+
+    // Check for active simulation
+    const simulationActive = localStorage.getItem('simulation_active') === 'true';
+    if (simulationActive) {
+      setIsSimulationActive(true);
+      setSkipAutoFetch(true); // Important: stop auto-fetching when simulation is active
+      
+      // Restore simulated values if available
+      const simulatedData = localStorage.getItem('simulated_data');
+      const isOverLimitStored = localStorage.getItem('simulation_over_limit') === 'true';
+      
+      if (simulatedData) {
+        try {
+          const data = JSON.parse(simulatedData);
+          setUsageData(data);
+          
+          // Set isOverLimit based on stored state explicitly instead of calculating
+          setIsOverLimit(isOverLimitStored);
+          
+          console.log("Restored simulation state:", { 
+            data, 
+            isOverLimit: isOverLimitStored 
+          });
+        } catch (e) {
+          console.error('Error parsing simulated data', e);
+        }
+      }
+    }
   }, [plugin]);
 
   const fetchUsageData = useCallback(async () => {
+    // Skip fetching if simulation is active
+    if (isSimulationActive) {
+      return;
+    }
+
     try {
       if (!plugin.settings.API_KEY) {
         setLoading(false);
         return;
       }
 
-      const response = await fetch(`${plugin.getServerUrl()}/api/usage`, {
+      // Check if we're in a simulated state and should skip actual fetching
+      if (skipAutoFetch) {
+        return; // Skip the actual fetch if we're in simulated mode
+      }
+
+      let url = `${plugin.getServerUrl()}/api/usage`;
+      
+      // Only in development mode - add simulated values
+      if (process.env.NODE_ENV === "development") {
+        const simulateParam = localStorage.getItem("simulated_token_usage");
+        if (simulateParam) {
+          url += `?simulate=${simulateParam}`;
+        }
+      }
+
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${plugin.settings.API_KEY}`,
         },
       });
       
-      if (!response.ok) throw new Error('Failed to fetch usage data');
-      
       const data = await response.json();
-      setUsageData(data);
+      
+      if (response.status === 429) {
+        setUsageData(data);
+        setIsOverLimit(true);
+      } else if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch usage data');
+      } else {
+        setUsageData(data);
+        setIsOverLimit(false);
+      }
     } catch (error) {
       logger.error('Error fetching usage data:', error);
     } finally {
       setLoading(false);
     }
-  }, [plugin]);
+  }, [plugin, skipAutoFetch, isSimulationActive]);
+
+  // Add a dev-only function to set simulated values
+  const setSimulatedUsage = useCallback((tokenUsage: number, maxTokenUsage: number) => {
+    if (process.env.NODE_ENV === "development") {
+      localStorage.setItem("simulated_token_usage", `${tokenUsage},${maxTokenUsage}`);
+      fetchUsageData();
+    }
+  }, [fetchUsageData]);
 
   useEffect(() => {
     fetchUsageData();
 
-    const intervalId = setInterval(fetchUsageData, 3000);
+    // Only set up interval if not in simulated mode
+    let intervalId: NodeJS.Timeout | null = null;
+    if (!skipAutoFetch) {
+      intervalId = setInterval(fetchUsageData, 3000);
+    }
 
-    return () => clearInterval(intervalId);
-  }, [fetchUsageData]);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [fetchUsageData, skipAutoFetch]);
+
+  // Function to activate simulation mode - update to ensure isOverLimit is set correctly
+  const activateSimulation = (data: UsageData, overLimit: boolean) => {
+    // Log for debugging
+    console.log("Activating simulation with:", {
+      tokenUsage: data.tokenUsage,
+      maxTokenUsage: data.maxTokenUsage,
+      overLimit: overLimit
+    });
+    
+    setUsageData(data);
+    setIsOverLimit(overLimit);
+    setIsSimulationActive(true);
+    setSkipAutoFetch(true); // Make sure auto-fetch is disabled
+    
+    // Store simulation state in localStorage
+    localStorage.setItem('simulation_active', 'true');
+    localStorage.setItem('simulated_data', JSON.stringify(data));
+    localStorage.setItem('simulation_over_limit', overLimit.toString());
+  };
+
+  // Function to clear simulation
+  const clearSimulation = () => {
+    setIsSimulationActive(false);
+    localStorage.removeItem('simulation_active');
+    localStorage.removeItem('simulated_data');
+    fetchUsageData();
+  };
 
   const handleSignup = async () => {
     if (isSignup && password !== confirmPassword) {
@@ -341,7 +443,30 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
     <div className="space-y-6">
       {usageData && (
         <>
+          {isOverLimit && (
+            <div className="bg-[--background-primary-alt] p-4 rounded-lg border-l-4 border-[--text-warning]">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-[--text-warning] mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <h4 className="font-medium mt-0 mb-1">Token Limit Reached</h4>
+                  <p className="text-[--text-muted] text-sm mb-3">
+                    You've used all your available tokens. Upgrade your plan to continue using Note Companion.
+                  </p>
+                  <button
+                    onClick={() => window.open(`${plugin.getServerUrl()}/onboarding`, '_blank')}
+                    className="bg-[--interactive-accent] text-[--text-on-accent] px-4 py-1.5 rounded hover:bg-[--interactive-accent-hover] transition-colors"
+                  >
+                    Upgrade Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <UsageStats usageData={usageData} />
+          
           <div className="border-t pt-6">
             <h3 className="text-lg font-medium mb-4 mt-0">Need more credits?</h3>
             <TopUpCredits plugin={plugin} onLicenseKeyChange={onLicenseKeyChange} />
@@ -372,6 +497,124 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
             </div>
           )}
         </>
+      )}
+
+      {/* Development-only controls for simulating different scenarios */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="mt-6 p-4 border-2 border-dashed border-red-400 rounded-md">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-medium mb-0">Development Testing Controls</h3>
+              <p className="text-sm text-gray-600 mb-0">Simulate different token usage scenarios</p>
+            </div>
+            
+            {isSimulationActive && (
+              <div className="flex items-center">
+                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-md text-sm mr-2">
+                  Simulation Active
+                </span>
+                <button
+                  onClick={clearSimulation}
+                  className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+                >
+                  Clear Simulation
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => activateSimulation({
+                tokenUsage: 3000,
+                maxTokenUsage: 10000,
+                subscriptionStatus: "active",
+                currentPlan: "pro"
+              }, false)}
+              className="px-3 py-2 bg-blue-500 text-white rounded"
+            >
+              Normal Usage (3k/10k)
+            </button>
+            
+            <button
+              onClick={() => activateSimulation({
+                tokenUsage: 9000,
+                maxTokenUsage: 10000,
+                subscriptionStatus: "active",
+                currentPlan: "pro"
+              }, false)}
+              className="px-3 py-2 bg-yellow-500 text-white rounded"
+            >
+              Near Limit (9k/10k)
+            </button>
+            
+            <button
+              onClick={() => activateSimulation({
+                tokenUsage: 10000,
+                maxTokenUsage: 10000,
+                subscriptionStatus: "active",
+                currentPlan: "pro"
+              }, true)}
+              className="px-3 py-2 bg-red-500 text-white rounded"
+            >
+              Over Limit (10k/10k)
+            </button>
+            
+            <button
+              onClick={() => activateSimulation({
+                tokenUsage: 0,
+                maxTokenUsage: 0,
+                subscriptionStatus: "active",
+                currentPlan: "free"
+              }, false)}
+              className="px-3 py-2 bg-gray-500 text-white rounded"
+            >
+              No Tokens (0/0)
+            </button>
+          </div>
+          
+          <div className="mt-4">
+            <p className="text-sm font-medium mb-2">Custom Token Usage:</p>
+            <div className="flex space-x-2">
+              <input 
+                type="number" 
+                placeholder="Used tokens"
+                className="px-2 py-1 border rounded w-24" 
+                value={customTokens}
+                onChange={(e) => setCustomTokens(parseInt(e.target.value) || 0)}
+              />
+              <span className="self-center">/</span>
+              <input 
+                type="number" 
+                placeholder="Max tokens"
+                className="px-2 py-1 border rounded w-24"
+                value={customMaxTokens}
+                onChange={(e) => setCustomMaxTokens(parseInt(e.target.value) || 0)}
+              />
+              <button
+                onClick={() => {
+                  // Calculate if we're over limit
+                  const isOver = customTokens >= customMaxTokens;
+                  console.log("Setting custom simulation:", { 
+                    used: customTokens, 
+                    max: customMaxTokens, 
+                    isOver 
+                  });
+                  
+                  activateSimulation({
+                    tokenUsage: customTokens,
+                    maxTokenUsage: customMaxTokens,
+                    subscriptionStatus: "active",
+                    currentPlan: customTokens > 1000 ? "pro" : "free"
+                  }, isOver);
+                }}
+                className="px-3 py-1 bg-green-500 text-white rounded"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

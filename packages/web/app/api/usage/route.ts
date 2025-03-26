@@ -7,6 +7,17 @@ export async function GET(request: NextRequest) {
   try {
     const { userId } = await handleAuthorizationV2(request);
 
+    // For local development/testing - simulate token usage
+    if (process.env.NODE_ENV === "development" && request.url.includes("3010")) {
+      return NextResponse.json({
+        tokenUsage: 11000,
+        maxTokenUsage: 10000,
+        subscriptionStatus: "active",
+        currentPlan: "pro",
+        tier: "developer"
+      });
+    }
+
     const userUsage = await db
       .select({
         tokenUsage: UserUsageTable.tokenUsage,
@@ -25,6 +36,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(userUsage[0]);
   } catch (error) {
+    // For local testing, you can optionally send a successful response even on error
+    if (process.env.NODE_ENV === "development" && request.url.includes("3010")) {
+      return NextResponse.json({
+        tokenUsage: 11000, 
+        maxTokenUsage: 10000,
+        subscriptionStatus: "active",
+        currentPlan: "pro",
+        tier: "developer"
+      });
+    }
+
     return NextResponse.json(
       { error: error.message },
       { status: error.status || 500 }

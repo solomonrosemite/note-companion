@@ -130,19 +130,19 @@ export default class FileOrganizer extends Plugin {
     return hasCatalystAccess;
   }
 
-  async isLicenseKeyValid(key: string): Promise<boolean> {
+  async isLicenseKeyValid(key: string): Promise<{ valid: boolean; overLimit: boolean }> {
     try {
-      const isValid = await checkLicenseKey(this.getServerUrl(), key);
+      const result = await checkLicenseKey(this.getServerUrl(), key);
 
-      this.settings.isLicenseValid = isValid;
+      this.settings.isLicenseValid = result.valid;
       this.settings.API_KEY = key;
       await this.saveSettings();
-      return isValid;
+      return result;
     } catch (error) {
       logger.error("Error checking API key:", error);
       this.settings.isLicenseValid = false;
       await this.saveSettings();
-      return false;
+      return { valid: false, overLimit: false };
     }
   }
   getServerUrl(): string {

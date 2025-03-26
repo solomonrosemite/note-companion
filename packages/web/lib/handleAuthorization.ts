@@ -139,6 +139,7 @@ export async function handleAuthorizationV2(req: NextRequest) {
         }
         
         if (remaining <= 0) {
+          // Make sure this is specifically a 429 error with proper structure
           throw new AuthorizationError(
             "Token limit exceeded. Please upgrade your plan for more tokens.",
             429
@@ -151,7 +152,11 @@ export async function handleAuthorizationV2(req: NextRequest) {
       }
     } catch (error) {
       console.error("API key validation error:", error);
-      // Continue to try Clerk authentication if API key validation fails
+      // Pass through token limit errors specifically
+      if (error instanceof AuthorizationError && error.status === 429) {
+        throw error; // Rethrow to maintain status code
+      }
+      // Continue to try Clerk authentication for other errors
     }
   }
 
