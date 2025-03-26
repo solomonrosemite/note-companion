@@ -34,7 +34,14 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
     if (!licenseKey) return;
     setKeyStatus('checking');
     const isValid = await plugin.isLicenseKeyValid(licenseKey);
-    setKeyStatus(plugin.settings.isTokenLimitReached ? 'valid' : (isValid ? 'valid' : 'invalid'));
+    
+    if (plugin.settings.isTokenLimitReached) {
+      setKeyStatus('valid'); // Keep license valid but show warning UI
+      logger.debug("Token limit reached, setting key status to valid with warning");
+    } else {
+      setKeyStatus(isValid ? 'valid' : 'invalid');
+      logger.debug(`License key validation result: ${isValid ? 'valid' : 'invalid'}`);
+    }
   };
 
   const handleLicenseKeyChange = async (value: string) => {
@@ -104,14 +111,12 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             <div className="font-medium">Token limit reached. Your license is still valid, but you need to upgrade your plan for more tokens.</div>
           </div>
           <div className="mt-3">
-            <a 
-              href="https://notecompanion.ai/pricing?utm_source=obsidian&utm_medium=in-app&utm_campaign=token-limit"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button 
+              onClick={() => window.open("https://notecompanion.ai/pricing?utm_source=obsidian&utm_medium=in-app&utm_campaign=token-limit", "_blank")}
               className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded transition-colors"
             >
               Upgrade Plan
-            </a>
+            </button>
           </div>
         </div>
       )}
@@ -171,25 +176,21 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
         <p className="file-organizer-support-text mb-4">
           Note Companion is an open-source initiative developed by two
           brothers. If you find it valuable, please{" "}
-          <a
-            href="https://notecompanion.ai/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[--text-accent] hover:text-[--text-accent-hover]"
+          <button
+            onClick={() => window.open("https://notecompanion.ai/?utm_source=obsidian&utm_medium=in-app&utm_campaign=support-us", "_blank")}
+            className="text-[--text-accent] hover:text-[--text-accent-hover] inline bg-transparent border-none p-0 cursor-pointer"
           >
             consider supporting us
-          </a>{" "}
+          </button>{" "}
           to help improve and maintain the project. 🙏
         </p>
         <p className="text-[--text-muted]">
-          <a
-            href="https://discord.gg/UWH53WqFuE"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[--text-accent] hover:text-[--text-accent-hover]"
+          <button
+            onClick={() => window.open("https://discord.gg/UWH53WqFuE", "_blank")}
+            className="text-[--text-accent] hover:text-[--text-accent-hover] inline bg-transparent border-none p-0 cursor-pointer"
           >
             Need help? Ask me on Discord.
-          </a>
+          </button>
         </p>
       </div>
     </div>
