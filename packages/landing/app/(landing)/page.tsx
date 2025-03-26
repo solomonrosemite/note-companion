@@ -10,11 +10,14 @@ import {
   MessageSquare,
   Video,
   Star,
+  ExternalLink,
+  Smartphone,
 } from "lucide-react";
 import { Demo } from "./demo/demo";
 import { PricingCards } from "./components/pricing-cards";
 import { FaqSection } from "./components/faq-section";
 import Image from 'next/image';
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "note companion — your ai-powered knowledge partner",
@@ -30,6 +33,21 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main className="flex min-h-screen flex-col items-center bg-background text-gray-700">
+      {/* Mobile App Banner - Now appears first */}
+      <div className="w-full bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Smartphone className="h-5 w-5 text-primary hidden sm:block" />
+            <p className="text-sm font-medium">
+              <span className="hidden sm:inline">NEW!</span> Note Companion Mobile with best-in-class OCR technology is now available for iOS and Android
+            </p>
+          </div>
+          <Link href="/mobile" className="text-primary text-sm font-medium hover:underline flex items-center">
+            Learn more <ExternalLink className="ml-1 h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+
       {/* Name Change Banner */}
       <div className="w-full bg-primary/5 border-b border-transparent bg-transparent ">
         <div className="max-w-7xl mx-auto px-6 py-2 text-center text-sm bg-background">

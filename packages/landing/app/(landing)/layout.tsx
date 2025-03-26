@@ -48,9 +48,10 @@ export default function RootLayout({
       <body className="bg-background">
         <TooltipProvider>
           <Providers>
-
             <main className="min-h-screen flex flex-col items-center">
               <div className="flex-1 w-full flex flex-col items-center">
+                <div className="flex flex-col w-full">{children}</div>
+                
                 <div className="w-full border-b border-gray-700 bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60">
                   <div className="mx-auto max-w-7xl px-6 py-4">
                     <div className="flex items-center justify-between">
@@ -97,9 +98,6 @@ export default function RootLayout({
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col p-5 pb-20 w-full">{children}</div>
-
-               
               </div>
             </main>
             <Toaster />
