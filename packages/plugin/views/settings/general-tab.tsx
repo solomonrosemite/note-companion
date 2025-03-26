@@ -103,6 +103,16 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             </svg>
             <div className="font-medium">Token limit reached. Your license is still valid, but you need to upgrade your plan for more tokens.</div>
           </div>
+          <div className="mt-3">
+            <a 
+              href="https://notecompanion.ai/pricing?utm_source=obsidian&utm_medium=in-app&utm_campaign=token-limit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded transition-colors"
+            >
+              Upgrade Plan
+            </a>
+          </div>
         </div>
       )}
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
