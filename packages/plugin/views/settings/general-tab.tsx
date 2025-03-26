@@ -34,7 +34,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
     if (!licenseKey) return;
     setKeyStatus('checking');
     const isValid = await plugin.isLicenseKeyValid(licenseKey);
-    setKeyStatus(isValid ? 'valid' : 'invalid');
+    setKeyStatus(plugin.settings.isTokenLimitReached ? 'valid' : (isValid ? 'valid' : 'invalid'));
   };
 
   const handleLicenseKeyChange = async (value: string) => {
@@ -95,6 +95,16 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
 
   return (
     <div className="file-organizer-settings space-y-6">
+      {plugin.settings.isTokenLimitReached && (
+        <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg mb-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="font-medium">Token limit reached. Your license is still valid, but you need to upgrade your plan for more tokens.</div>
+          </div>
+        </div>
+      )}
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <div className="space-y-4">
           <div>
@@ -109,8 +119,9 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
               <input
                 type="text"
                 className={`flex-1 bg-[--background-primary] border rounded px-3 py-1.5 ${keyStatus === 'valid' ? 'border-[--text-success]' : 
+                  (plugin.settings.isTokenLimitReached ? 'border-[--text-warning]' : 
                   keyStatus === 'invalid' ? 'border-[--text-error]' : 
-                  'border-[--background-modifier-border]'}`}
+                  'border-[--background-modifier-border]')}`}
                 placeholder="Enter your File Organizer License Key"
                 value={licenseKey}
                 onChange={e => handleLicenseKeyChange(e.target.value)}

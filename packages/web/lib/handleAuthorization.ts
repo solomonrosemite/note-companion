@@ -147,7 +147,7 @@ export async function handleAuthorizationV2(req: NextRequest) {
             "Token limit exceeded. Please upgrade your plan for more tokens.",
             429,
             true, // Mark as token limit error
-            userId // Include userId so we can still fetch usage data
+            result.ownerId // Include userId so we can still fetch usage data
           );
         }
         
@@ -249,7 +249,7 @@ export async function handleAuthorization(req: NextRequest) {
       "Credits limit exceeded. Top up your credits in settings.",
       429,
       true, // Mark as token limit error
-      userId // Include userId so we can still fetch usage data
+      result.ownerId // Include userId so we can still fetch usage data
     );
   }
 
