@@ -7,9 +7,15 @@ export async function makeApiRequest<T = any>(
 ): Promise<T> {
   logMessage("Making API request", requestFn);
   const response: RequestUrlResponse = await requestFn();
+  
+  if (response.status === 429) {
+    return response.json as T;
+  }
+  
   if (response.status >= 200 && response.status < 300) {
     return response.json as T;
   }
+  
   if (response.json.error) {
     new Notice(`File Organizer error: ${response.json.error}`, 6000);
     throw new Error(response.json.error);
@@ -30,7 +36,8 @@ export async function checkLicenseKey(
         Authorization: `Bearer ${key}`,
       },
     });
-    console.log("response", response.json);
+    console.log("License check response status:", response.status);
+    console.log("License check response body:", response.json);
     
     if (response.status === 200) {
       return "valid";
