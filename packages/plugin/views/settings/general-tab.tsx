@@ -88,7 +88,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-medium mb-2 mt-0">File Organizer License Key</h3>
+            <h3 className="text-lg font-medium mb-2 mt-0">Note Companion License Key</h3>
             <p className="text-[--text-muted] mb-4">
               Enter your license key to activate Note Companion.
             </p>
