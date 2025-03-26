@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
         maxTokenUsage: maxTokenUsage || 10000,
         subscriptionStatus: "active",
         currentPlan: "pro",
-        tier: "developer"
+        tier: "developer",
+        billingCycle: "monthly"
       })
       .onConflictDoUpdate({
         target: UserUsageTable.userId,
