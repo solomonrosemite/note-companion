@@ -20,7 +20,7 @@ export async function makeApiRequest<T = any>(
 export async function checkLicenseKey(
   serverUrl: string,
   key: string
-): Promise<boolean> {
+): Promise<"valid" | "invalid" | "exceeded"> {
   try {
     const response: RequestUrlResponse = await requestUrl({
       url: `${serverUrl}/api/check-key`,
@@ -31,9 +31,15 @@ export async function checkLicenseKey(
       },
     });
     console.log("response", response.json);
-    return response.status === 200;
+    
+    if (response.status === 200) {
+      return "valid";
+    } else if (response.status === 429) {
+      return "exceeded";
+    }
+    return "invalid";
   } catch (error) {
     logger.error("Error checking API key:", error);
-    return false;
+    return "invalid";
   }
 }

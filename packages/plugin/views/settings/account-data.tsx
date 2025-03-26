@@ -64,10 +64,17 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
         },
       });
       
-      if (!response.ok) throw new Error('Failed to fetch usage data');
-      
-      const data = await response.json();
-      setUsageData(data);
+      if (!response.ok) {
+        if (response.status === 429) {
+          const data = await response.json();
+          setUsageData(data);
+        } else {
+          throw new Error('Failed to fetch usage data');
+        }
+      } else {
+        const data = await response.json();
+        setUsageData(data);
+      }
     } catch (error) {
       logger.error('Error fetching usage data:', error);
     } finally {
@@ -342,6 +349,18 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
       {usageData && (
         <>
           <UsageStats usageData={usageData} />
+          
+          {usageData && usageData.tokenUsage >= usageData.maxTokenUsage && (
+            <div className="mt-4">
+              <button
+                onClick={() => window.open(`${plugin.getServerUrl()}/onboarding`, "_blank")}
+                className="bg-[--interactive-accent] text-[--text-on-accent] px-4 py-2 rounded hover:bg-[--interactive-accent-hover] transition-colors font-medium"
+              >
+                Upgrade Plan
+              </button>
+            </div>
+          )}
+          
           <div className="border-t pt-6">
             <h3 className="text-lg font-medium mb-4 mt-0">Need more credits?</h3>
             <TopUpCredits plugin={plugin} onLicenseKeyChange={onLicenseKeyChange} />
@@ -375,4 +394,4 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
       )}
     </div>
   );
-}; 
+};    
