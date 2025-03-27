@@ -8,6 +8,8 @@ import { AccountData } from './account-data';
 
 interface GeneralTabProps {
   plugin: FileOrganizer;
+  userId?: string; // Make userId optional
+  email?: string;  // Make email optional
 }
 
 interface UsageData {
@@ -22,19 +24,52 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
   const [keyStatus, setKeyStatus] = useState<'valid' | 'invalid' | 'checking' | 'idle'>(
     plugin.settings.API_KEY ? 'checking' : 'idle'
   );
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] = useState(false);
 
   // Check key status on mount if we have a key
   useEffect(() => {
     if (plugin.settings.API_KEY) {
       checkLicenseStatus();
     }
+    
+    // Always fetch usage data regardless of license key status
+    fetchUsageData();
   }, []);
+
+  const fetchUsageData = async () => {
+    try {
+      setIsLoadingUsage(true);
+      
+      // Try to fetch usage data with current key
+      const data = await plugin.fetchUsageStats();
+      
+      if (data) {
+        setUsageData(data);
+        
+        // If the token usage meets or exceeds the limit, show a specific notice
+        if (data.tokenUsage >= data.maxTokenUsage) {
+          new Notice("Token limit reached. Please upgrade your plan for more tokens.", 5000);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch usage data:", error);
+      // Don't set usage data to null on error - keep previous state
+    } finally {
+      setIsLoadingUsage(false);
+    }
+  };
 
   const checkLicenseStatus = async () => {
     if (!licenseKey) return;
     setKeyStatus('checking');
     const isValid = await plugin.isLicenseKeyValid(licenseKey);
     setKeyStatus(isValid ? 'valid' : 'invalid');
+    
+    // Refresh usage data after key validation
+    if (isValid) {
+      fetchUsageData();
+    }
   };
 
   const handleLicenseKeyChange = async (value: string) => {
@@ -115,6 +150,76 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             {getStatusIndicator()}
           </div>
         </div>
+      </div>
+
+      {/* Usage Stats Section - Always visible */}
+      <div className="bg-[--background-primary-alt] p-4 rounded-lg">
+        <h3 className="text-lg font-medium mb-2 mt-0">Usage Statistics</h3>
+        {isLoadingUsage ? (
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[--text-accent]"></div>
+          </div>
+        ) : usageData ? (
+          <div className="space-y-3">
+            <div className="relative pt-1">
+              <div className="flex mb-2 items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold inline-block text-[--text-normal]">
+                    Token Usage
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-semibold inline-block text-[--text-normal]">
+                    {usageData.tokenUsage.toLocaleString()} / {usageData.maxTokenUsage.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[--background-modifier-border]">
+                <div 
+                  style={{ width: `${Math.min(100, (usageData.tokenUsage / usageData.maxTokenUsage) * 100)}%` }}
+                  className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
+                    usageData.tokenUsage > usageData.maxTokenUsage * 0.9 ? 'bg-[--text-error]' : 'bg-[--text-accent]'
+                  }`}
+                ></div>
+              </div>
+            </div>
+            <div className="text-sm text-[--text-muted]">
+              <p>Plan: <span className="font-medium text-[--text-normal]">{usageData.currentPlan || 'Free'}</span></p>
+              <p>Status: <span className={`font-medium ${usageData.subscriptionStatus === 'active' ? 'text-[--text-success]' : 'text-[--text-warning]'}`}>
+                {usageData.subscriptionStatus === 'active' ? 'Active' : 'Inactive'}
+              </span></p>
+            </div>
+            {usageData && usageData.tokenUsage >= usageData.maxTokenUsage && (
+              <div className="mt-2 p-3 bg-[--background-modifier-error-rgb] bg-opacity-20 rounded text-[--text-error] text-sm">
+                <strong>Token limit reached!</strong> You've used all your available tokens.
+                <br />
+                Please upgrade your plan to continue using Note Companion's AI features.
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[--text-muted] text-sm">
+            {!plugin.settings.API_KEY ? 
+              "Please enter a license key to see usage statistics." :
+              keyStatus === 'invalid' ? 
+                "License key appears to be invalid. Enter a valid key to see detailed usage statistics." :
+                "No usage data available. Please check your connection and try again."}
+          </p>
+        )}
+        
+        {/* Top Up Credits button - only show for valid keys */}
+        {usageData && (
+          <div className="mt-4">
+            <button
+              onClick={() => plugin.openTopUpCreditsModal()}
+              className="w-full bg-[--interactive-accent] text-[--text-on-accent] px-4 py-2 rounded hover:bg-[--interactive-accent-hover] transition-colors"
+            >
+              {usageData.tokenUsage >= usageData.maxTokenUsage ? 
+                "Upgrade Plan" : 
+                "Top Up Credits"}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">

@@ -106,6 +106,14 @@ interface TitleSuggestion {
   reason: string;
 }
 
+export interface UsageData {
+  tokenUsage: number;
+  maxTokenUsage: number;
+  subscriptionStatus: string;
+  currentPlan: string;
+  isActive?: boolean;
+}
+
 export default class FileOrganizer extends Plugin {
   public inbox: Inbox;
   settings: FileOrganizerSettings;
@@ -1200,4 +1208,105 @@ export default class FileOrganizer extends Plugin {
     }
   }
   
+  async fetchUsageStats(): Promise<UsageData | null> {
+    try {
+      if (!this.settings.API_KEY) {
+        return null;
+      }
+      
+      // Try the public-usage endpoint first (works even with token limits)
+      try {
+        const publicResponse = await fetch(`${this.getServerUrl()}/api/public-usage`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${this.settings.API_KEY}`
+          },
+        });
+        
+        if (publicResponse.ok) {
+          const data = await publicResponse.json();
+          return data;
+        }
+        
+        logger.debug("Public usage endpoint failed, trying regular endpoint");
+      } catch (error) {
+        logger.debug("Error fetching from public usage endpoint, trying regular endpoint");
+      }
+      
+      // Fall back to the regular endpoint
+      const response = await fetch(`${this.getServerUrl()}/api/usage`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.settings.API_KEY}`
+        },
+      });
+      
+      if (!response.ok) {
+        // Special handling for token limit errors (429)
+        if (response.status === 429) {
+          // Get the error message
+          const errorData = await response.json();
+          
+          // If we got a token limit error, create a synthetic response
+          // with maxed out usage data
+          if (errorData.error && errorData.error.includes("Token limit exceeded")) {
+            // Try to get basic info from public API
+            try {
+              const publicResponse = await fetch(`${this.getServerUrl()}/api/public-usage`, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${this.settings.API_KEY}`
+                },
+              });
+              
+              if (publicResponse.ok) {
+                return await publicResponse.json();
+              }
+            } catch (e) {
+              logger.debug("Failed to get public usage after token limit error", e);
+            }
+            
+            // Fallback if public API also fails
+            return {
+              tokenUsage: 100000, // Some large number
+              maxTokenUsage: 100000,
+              subscriptionStatus: "active",
+              currentPlan: "Free Tier",
+              isActive: true
+            };
+          }
+        }
+        
+        throw new Error(`Failed to fetch usage stats: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+      
+    } catch (error) {
+      logger.error("Failed to fetch usage statistics", error);
+      return null;
+    }
+  }
+
+  openTopUpCreditsModal() {
+    // Get the server domain from settings
+    const serverUrl = this.getServerUrl();
+    
+    // Extract the domain from the full server URL
+    // This pattern transforms "https://app.notecompanion.ai/api" into "https://app.notecompanion.ai"
+    const serverDomain = serverUrl.replace(/\/api\/?$/, '');
+    
+    // Use the server domain for the top-up URL
+    const topUpUrl = `${serverDomain}/onboarding`;
+    
+    // Log the URL being opened (helpful for debugging)
+    logger.debug(`Opening top-up credits URL: ${topUpUrl}`);
+    
+    // Open the URL in a browser
+    window.open(topUpUrl, '_blank');
+  }
 }

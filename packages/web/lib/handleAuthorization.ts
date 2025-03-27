@@ -1,7 +1,7 @@
 import { clerkClient, auth } from "@clerk/nextjs/server";
 import { verifyKey } from "@unkey/api";
 import { NextRequest } from "next/server";
-import { checkTokenUsage, checkUserSubscriptionStatus, createEmptyUserUsage, UserUsageTable, db, initializeTierConfig } from "../drizzle/schema";
+import { checkTokenUsage, checkUserSubscriptionStatus, createEmptyUserUsage, UserUsageTable, db, initializeTierConfig, isSubscriptionActive } from "../drizzle/schema";
 import PostHogClient from "./posthog";
 import { eq } from "drizzle-orm";
 import { nanoid } from 'nanoid';
@@ -166,6 +166,49 @@ async function handleClerkAuth(logger: ReturnType<typeof createLogger>) {
   return userId;
 }
 
+// Helper functions for user validation
+async function validateSubscription(userId: string, logger: ReturnType<typeof createLogger>) {
+  logger.info('Validating user subscription', { userId });
+  const isActive = await isSubscriptionActive(userId);
+  
+  if (!isActive) {
+    logger.info('Subscription inactive', { userId });
+    throw new AuthorizationError("Subscription inactive", 403);
+  }
+  
+  return true;
+}
+
+async function validateTokenUsage(userId: string, logger: ReturnType<typeof createLogger>) {
+  logger.info('Checking token usage', { userId });
+  const { remaining, usageError } = await checkTokenUsage(userId);
+  
+  if (usageError) {
+    logger.error('Token usage check failed', { error: 'Database error' });
+    throw new AuthorizationError("Usage check failed", 500);
+  }
+
+  if (remaining <= 0) {
+    // Get the user's current usage and limits for better error reporting
+    const userUsage = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+    
+    const usage = userUsage.length > 0 ? userUsage[0].tokenUsage : 0;
+    const limit = userUsage.length > 0 ? userUsage[0].maxTokenUsage : 0;
+    
+    logger.info('Token limit exceeded', { userId, remaining, usage, limit });
+    throw new AuthorizationError(
+      `Token limit exceeded. Used ${usage}/${limit} tokens. Please upgrade your plan for more tokens.`,
+      429
+    );
+  }
+  
+  return { remaining };
+}
+
 export async function handleAuthorizationV2(req: NextRequest) {
   const requestId = nanoid();
   const context: AuthContext = {
@@ -189,27 +232,15 @@ export async function handleAuthorizationV2(req: NextRequest) {
     if (token) {
       const userId = await handleApiKeyAuth(token, logger);
       if (userId) {
-        // Validate user access
+        // Validate user access - separated subscription and token checks
         try {
           await ensureUserExists(userId);
           
-          const isActive = await checkUserSubscriptionStatus(userId);
-          if (!isActive) {
-            throw new AuthorizationError("Subscription inactive", 403);
-          }
-
-          const { remaining, usageError } = await checkTokenUsage(userId);
-          if (usageError) {
-            throw new AuthorizationError("Usage check failed", 500);
-          }
-
-          if (remaining <= 0) {
-            logger.info('Token limit exceeded', { userId, remaining });
-            throw new AuthorizationError(
-              "Token limit exceeded. Please upgrade your plan for more tokens.",
-              429
-            );
-          }
+          // First check subscription
+          await validateSubscription(userId, logger);
+          
+          // Then check token usage
+          const { remaining } = await validateTokenUsage(userId, logger);
 
           logger.info('Authorization successful via API key', { userId, remaining });
           await handleLoggingV2(req, userId);
@@ -224,27 +255,15 @@ export async function handleAuthorizationV2(req: NextRequest) {
     // Fall back to Clerk auth
     const userId = await handleClerkAuth(logger);
     if (userId) {
-      // Validate user access (same validation logic as above)
+      // Validate user access with separated concerns
       try {
         await ensureUserExists(userId);
         
-        const isActive = await checkUserSubscriptionStatus(userId);
-        if (!isActive) {
-          throw new AuthorizationError("Subscription inactive", 403);
-        }
-
-        const { remaining, usageError } = await checkTokenUsage(userId);
-        if (usageError) {
-          throw new AuthorizationError("Usage check failed", 500);
-        }
-
-        if (remaining <= 0) {
-          logger.info('Token limit exceeded', { userId, remaining });
-          throw new AuthorizationError(
-            "Token limit exceeded. Please upgrade your plan for more tokens.",
-            429
-          );
-        }
+        // First check subscription
+        await validateSubscription(userId, logger);
+        
+        // Then check token usage
+        const { remaining } = await validateTokenUsage(userId, logger);
 
         logger.info('Authorization successful via Clerk', { userId, remaining });
         await handleLoggingV2(req, userId);
@@ -260,7 +279,7 @@ export async function handleAuthorizationV2(req: NextRequest) {
 
   } catch (error) {
     // Log the full error but return a sanitized version
-    logger.error('Authorization failed', error);
+    logger.error('Authorization failed', error instanceof Error ? error : new Error('Unknown error'));
     if (error instanceof AuthorizationError) {
       throw error;
     }
