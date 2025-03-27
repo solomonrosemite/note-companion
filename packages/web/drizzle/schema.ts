@@ -355,6 +355,20 @@ export async function createOrUpdateUserSubscriptionStatus(
       ? tierConfig[0].maxTokens 
       : DEFAULT_FREE_TIER_TOKENS;
     
+    // Check if this is a tier upgrade from free to paid
+    const existingUser = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+    
+    const isUpgradeFromFree = existingUser.length > 0 && 
+      existingUser[0].tier === "free" && 
+      tier !== "free";
+      
+    // For upgrades, reset token usage to 0
+    const tokenUsage = isUpgradeFromFree ? 0 : (existingUser.length > 0 ? existingUser[0].tokenUsage : 0);
+    
     await db
       .insert(UserUsageTable)
       .values({
@@ -362,7 +376,7 @@ export async function createOrUpdateUserSubscriptionStatus(
         subscriptionStatus,
         paymentStatus,
         billingCycle,
-        tokenUsage: 0,
+        tokenUsage: tokenUsage, // Use the adjusted token usage
         maxTokenUsage: maxTokens,
         tier,
         createdAt: new Date(),
@@ -374,6 +388,7 @@ export async function createOrUpdateUserSubscriptionStatus(
           paymentStatus,
           billingCycle,
           tier,
+          tokenUsage: tokenUsage, // Reset token usage for upgrades
           maxTokenUsage: maxTokens,
         },
       });
