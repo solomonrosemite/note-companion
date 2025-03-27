@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { checkTokenUsage, checkUserSubscriptionStatus, createEmptyUserUsage, UserUsageTable, db, initializeTierConfig } from "../drizzle/schema";
 import PostHogClient from "./posthog";
 import { eq } from "drizzle-orm";
+import { nanoid } from 'nanoid';
 
 /**
  * @deprecated This function is being deprecated in favor of a new authorization method.
@@ -107,92 +108,164 @@ async function ensureUserExists(userId: string): Promise<boolean> {
   }
 }
 
+interface AuthContext {
+  requestId: string;
+  path: string;
+  method: string;
+}
+
+function createLogger(context: AuthContext) {
+  return {
+    info: (message: string, extra = {}) => {
+      console.log(JSON.stringify({
+        level: 'info',
+        message,
+        ...context,
+        ...extra,
+        timestamp: new Date().toISOString()
+      }));
+    },
+    error: (message: string, error: any, extra = {}) => {
+      console.error(JSON.stringify({
+        level: 'error',
+        message,
+        error: error?.message,
+        stack: error?.stack,
+        ...context,
+        ...extra,
+        timestamp: new Date().toISOString()
+      }));
+    }
+  };
+}
+
+// Helper functions for authentication flows
+async function handleApiKeyAuth(token: string, logger: ReturnType<typeof createLogger>) {
+  logger.info('Attempting API key authentication');
+  const { result, error } = await verifyKey(token);
+  
+  if (!result.valid) {
+    logger.error('API key validation failed', error, { code: result.code });
+    return null;
+  }
+
+  logger.info('API key authentication successful', { ownerId: result.ownerId });
+  return result.ownerId;
+}
+
+async function handleClerkAuth(logger: ReturnType<typeof createLogger>) {
+  logger.info('Attempting Clerk authentication');
+  const { userId } = await auth();
+  
+  if (!userId) {
+    logger.error('Clerk authentication failed', null);
+    return null;
+  }
+
+  logger.info('Clerk authentication successful', { userId });
+  return userId;
+}
+
 export async function handleAuthorizationV2(req: NextRequest) {
-  // this is to allow people to self host it easily without
-  // setting up clerk
+  const requestId = nanoid();
+  const context: AuthContext = {
+    requestId,
+    path: req.nextUrl.pathname,
+    method: req.method
+  };
+  const logger = createLogger(context);
+
+  logger.info('Starting authorization process');
+
+  // Skip auth if user management is disabled
   if (process.env.ENABLE_USER_MANAGEMENT !== "true") {
+    logger.info('User management disabled, returning default user');
     return { userId: "user", isCustomer: true };
   }
 
-  // First, try API key authentication
-  const token = getToken(req);
-  if (token) {
-    try {
-      const { result, error } = await verifyKey(token);
-      if (result.valid) {
-        // API key is valid
-        console.log("API key authentication successful");
+  try {
+    // Try API key auth first
+    const token = getToken(req);
+    if (token) {
+      const userId = await handleApiKeyAuth(token, logger);
+      if (userId) {
+        // Validate user access
+        try {
+          await ensureUserExists(userId);
+          
+          const isActive = await checkUserSubscriptionStatus(userId);
+          if (!isActive) {
+            throw new AuthorizationError("Subscription inactive", 403);
+          }
+
+          const { remaining, usageError } = await checkTokenUsage(userId);
+          if (usageError) {
+            throw new AuthorizationError("Usage check failed", 500);
+          }
+
+          if (remaining <= 0) {
+            logger.info('Token limit exceeded', { userId, remaining });
+            throw new AuthorizationError(
+              "Token limit exceeded. Please upgrade your plan for more tokens.",
+              429
+            );
+          }
+
+          logger.info('Authorization successful via API key', { userId, remaining });
+          await handleLoggingV2(req, userId);
+          return { userId };
+        } catch (error) {
+          logger.error('User validation failed', error, { userId });
+          throw error;
+        }
+      }
+    }
+
+    // Fall back to Clerk auth
+    const userId = await handleClerkAuth(logger);
+    if (userId) {
+      // Validate user access (same validation logic as above)
+      try {
+        await ensureUserExists(userId);
         
-        // Ensure user exists in database
-        await ensureUserExists(result.ownerId);
-        
-        // Check subscription status
-        const isActive = await checkUserSubscriptionStatus(result.ownerId);
+        const isActive = await checkUserSubscriptionStatus(userId);
         if (!isActive) {
-          throw new AuthorizationError("Subscription canceled or inactive", 403);
+          throw new AuthorizationError("Subscription inactive", 403);
         }
-        
-        // Check token usage
-        const { remaining, usageError } = await checkTokenUsage(result.ownerId);
+
+        const { remaining, usageError } = await checkTokenUsage(userId);
         if (usageError) {
-          throw new AuthorizationError("Error checking token usage", 500);
+          throw new AuthorizationError("Usage check failed", 500);
         }
-        
+
         if (remaining <= 0) {
+          logger.info('Token limit exceeded', { userId, remaining });
           throw new AuthorizationError(
             "Token limit exceeded. Please upgrade your plan for more tokens.",
             429
           );
         }
-        
-        // Might require await
-        handleLoggingV2(req, result.ownerId);
-        return { userId: result.ownerId };
-      }
-    } catch (error) {
-      console.error("API key validation error:", error);
-      // Continue to try Clerk authentication if API key validation fails
-    }
-  }
 
-  // If API key authentication failed or wasn't provided, try Clerk authentication
-  try {
-    const { userId } = await auth();
-    if (userId) {
-      console.log("Clerk authentication successful");
-      
-      // Ensure user exists in database
-      await ensureUserExists(userId);
-      
-      // Check subscription status
-      const isActive = await checkUserSubscriptionStatus(userId);
-      if (!isActive) {
-        throw new AuthorizationError("Subscription canceled or inactive", 403);
+        logger.info('Authorization successful via Clerk', { userId, remaining });
+        await handleLoggingV2(req, userId);
+        return { userId };
+      } catch (error) {
+        logger.error('User validation failed', error, { userId });
+        throw error;
       }
-      
-      // Check token usage
-      const { remaining, usageError } = await checkTokenUsage(userId);
-      if (usageError) {
-        throw new AuthorizationError("Error checking token usage", 500);
-      }
-      
-      if (remaining <= 0) {
-        throw new AuthorizationError(
-          "Token limit exceeded. Please upgrade your plan for more tokens.",
-          429
-        );
-      }
-      
-      handleLoggingV2(req, userId);
-      return { userId };
     }
+
+    logger.error('All authentication methods failed', null);
+    throw new AuthorizationError("Unauthorized", 401);
+
   } catch (error) {
-    console.error("Clerk authentication error:", error);
-    // Authentication failed, will throw below
+    // Log the full error but return a sanitized version
+    logger.error('Authorization failed', error);
+    if (error instanceof AuthorizationError) {
+      throw error;
+    }
+    throw new AuthorizationError("Internal server error", 500);
   }
-
-  // If we reach here, both authentication methods failed
-  throw new AuthorizationError("Unauthorized", 401);
 }
 
 /**
