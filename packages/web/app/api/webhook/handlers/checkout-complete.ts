@@ -28,22 +28,29 @@ const handleSubscription = async (
       userId: metadata.userId,
       subscriptionStatus: "active",
       paymentStatus: "paid",
-      maxTokenUsage: 5000 * 1000,
+      maxTokenUsage: 5000 * 1000, // 5 million tokens
       billingCycle: metadata.type,
       lastPayment: new Date(),
       currentPlan: metadata.plan,
       currentProduct: metadata.type,
       hasCatalystAccess: true,
+      tier: "paid", // Explicitly set tier to paid
     })
     .onConflictDoUpdate({
       target: [UserUsageTable.userId],
       set: {
+        subscriptionStatus: "active",
+        paymentStatus: "paid", 
+        maxTokenUsage: 5000 * 1000, // Ensure token limit is updated on upgrade
         lastPayment: new Date(),
         currentPlan: metadata.plan,
         currentProduct: metadata.type,
         hasCatalystAccess: true,
+        tier: "paid", // Explicitly set tier to paid
       },
     });
+    
+  console.log(`Updated subscription for user ${metadata.userId}`);
 };
 
 const handlePayOnce = async (
