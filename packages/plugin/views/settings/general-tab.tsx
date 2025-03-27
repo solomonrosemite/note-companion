@@ -234,10 +234,10 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
         </div>
       </div>
 
-      <AccountData 
+      {/* <AccountData 
         plugin={plugin} 
         onLicenseKeyChange={handleLicenseKeyChange}
-      />
+      /> */}
 
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <p className="file-organizer-support-text mb-4">
