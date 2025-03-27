@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { UsageStats } from '../../components/usage-stats';
+import React, { useState, useEffect } from 'react';
 import { TopUpCredits } from './top-up-credits';
 import { logger } from '../../services/logger';
 import FileOrganizer from '../../index';
@@ -10,13 +9,6 @@ interface AccountDataProps {
   onLicenseKeyChange: (key: string) => void;
 }
 
-interface UsageData {
-  tokenUsage: number;
-  maxTokenUsage: number;
-  subscriptionStatus: string;
-  currentPlan: string;
-}
-
 interface SignupResponse {
   success: boolean;
   licenseKey?: string;
@@ -24,8 +16,7 @@ interface SignupResponse {
 }
 
 export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyChange }) => {
-  const [usageData, setUsageData] = useState<UsageData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,38 +41,6 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
     
     checkDevMode();
   }, [plugin]);
-
-  const fetchUsageData = useCallback(async () => {
-    try {
-      if (!plugin.settings.API_KEY) {
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${plugin.getServerUrl()}/api/usage`, {
-        headers: {
-          Authorization: `Bearer ${plugin.settings.API_KEY}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch usage data');
-      
-      const data = await response.json();
-      setUsageData(data);
-    } catch (error) {
-      logger.error('Error fetching usage data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [plugin]);
-
-  useEffect(() => {
-    fetchUsageData();
-
-    const intervalId = setInterval(fetchUsageData, 3000);
-
-    return () => clearInterval(intervalId);
-  }, [fetchUsageData]);
 
   const handleSignup = async () => {
     if (isSignup && password !== confirmPassword) {
@@ -148,7 +107,6 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
       
       if (response.ok) {
         new Notice(`Successfully added ${tokens.toLocaleString()} tokens to your account!`, 5000);
-        fetchUsageData();
       } else {
         setError(data.error || 'Failed to add tokens');
       }
@@ -339,39 +297,34 @@ export const AccountData: React.FC<AccountDataProps> = ({ plugin, onLicenseKeyCh
 
   return (
     <div className="space-y-6">
-      {usageData && (
-        <>
-          <UsageStats usageData={usageData} />
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium mb-4 mt-0">Need more credits?</h3>
-            <TopUpCredits plugin={plugin} onLicenseKeyChange={onLicenseKeyChange} />
-          </div>
-          
-          {isDevMode && (
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4 mt-0">Development Tools</h3>
-              <div className="bg-[--background-primary] p-4 rounded-lg border border-[--background-modifier-border]">
-                <h4 className="font-medium mb-2 mt-0">Add Development Tokens</h4>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    value={devTokens}
-                    onChange={(e) => setDevTokens(e.target.value)}
-                    className="flex-1 bg-[--background-primary] border border-[--background-modifier-border] rounded px-3 py-2"
-                    placeholder="Number of tokens"
-                  />
-                  <button
-                    onClick={handleDevTopUp}
-                    disabled={isLoading}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? 'Adding...' : 'Add Tokens'}
-                  </button>
-                </div>
-              </div>
+      <div className="pt-6">
+        <h3 className="text-lg font-medium mb-4 mt-0">Need more credits?</h3>
+        <TopUpCredits plugin={plugin} onLicenseKeyChange={onLicenseKeyChange} />
+      </div>
+      
+      {isDevMode && (
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-medium mb-4 mt-0">Development Tools</h3>
+          <div className="bg-[--background-primary] p-4 rounded-lg border border-[--background-modifier-border]">
+            <h4 className="font-medium mb-2 mt-0">Add Development Tokens</h4>
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                value={devTokens}
+                onChange={(e) => setDevTokens(e.target.value)}
+                className="flex-1 bg-[--background-primary] border border-[--background-modifier-border] rounded px-3 py-2"
+                placeholder="Number of tokens"
+              />
+              <button
+                onClick={handleDevTopUp}
+                disabled={isLoading}
+                className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Adding...' : 'Add Tokens'}
+              </button>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

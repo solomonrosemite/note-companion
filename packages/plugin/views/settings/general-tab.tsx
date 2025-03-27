@@ -190,7 +190,7 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
               </span></p>
             </div>
             {usageData && usageData.tokenUsage >= usageData.maxTokenUsage && (
-              <div className="mt-2 p-3 bg-[--background-modifier-error-rgb] bg-opacity-20 rounded text-[--text-error] text-sm">
+              <div className="mt-2 p-3 bg-[--background-] bg-opacity-20 rounded text-[--text-error] text-sm">
                 <strong>Token limit reached!</strong> You've used all your available tokens for this month. Next reset is on the 1st of the next month.
                 <br />
                 <br />
@@ -236,10 +236,10 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
         </div>
       </div>
 
-      {/* <AccountData 
+      <AccountData 
         plugin={plugin} 
         onLicenseKeyChange={handleLicenseKeyChange}
-      /> */}
+      />
 
       <div className="bg-[--background-primary-alt] p-4 rounded-lg">
         <p className="file-organizer-support-text mb-4">
