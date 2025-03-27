@@ -279,8 +279,8 @@ export const checkTokenUsage = async (userId: string) => {
   }
 };
 
-// check if has active subscription
-export const checkUserSubscriptionStatus = async (userId: string) => {
+// Separate subscription check from token check
+export const isSubscriptionActive = async (userId: string): Promise<boolean> => {
   console.log("Checking subscription status for User ID:", userId);
   try {
     const userUsage = await db
@@ -289,36 +289,50 @@ export const checkUserSubscriptionStatus = async (userId: string) => {
       .where(eq(UserUsageTable.userId, userId))
       .limit(1)
       .execute();
-    console.log("User Usage Results for User ID:", userId, userUsage);
     
     if (!userUsage[0]) {
       console.log(`No user record found for ${userId}, will be initialized with free tier`);
       return true; // Return true to allow initialization in ensureUserExists
     }
 
-    // Check for free tier
+    // Free tier is considered active by default
     if (userUsage[0].tier === "free") {
-      console.log(`User ${userId} is on free tier`);
-      // For free tier, check if they have remaining tokens
-      const tokenCheck = await checkTokenUsage(userId);
-      return tokenCheck.remaining > 0;
-    }
-
-    // Check for paid tiers
-    if (
-      userUsage[0].paymentStatus === "paid" ||
-      userUsage[0].paymentStatus === "succeeded" ||
-      userUsage[0].paymentStatus === "free"
-    ) {
       return true;
     }
 
-    return false;
+    // Check for paid tiers - only check payment status
+    return (
+      userUsage[0].paymentStatus === "paid" ||
+      userUsage[0].paymentStatus === "succeeded" ||
+      userUsage[0].paymentStatus === "free"
+    );
   } catch (error) {
     console.error("Error checking subscription status for User ID:", userId);
     console.error(error);
     return false;
   }
+};
+
+// Update checkUserSubscriptionStatus to use the new function and handle token limit separately
+export const checkUserSubscriptionStatus = async (userId: string): Promise<boolean> => {
+  const isActive = await isSubscriptionActive(userId);
+  
+  // For free tier, also check if they have remaining tokens
+  if (isActive) {
+    const userUsage = await db
+      .select()
+      .from(UserUsageTable)
+      .where(eq(UserUsageTable.userId, userId))
+      .limit(1);
+    
+    if (userUsage.length > 0 && userUsage[0].tier === "free") {
+      // For free tier, check remaining tokens
+      const tokenCheck = await checkTokenUsage(userId);
+      return tokenCheck.remaining > 0;
+    }
+  }
+  
+  return isActive;
 };
 
 export async function createOrUpdateUserSubscriptionStatus(
