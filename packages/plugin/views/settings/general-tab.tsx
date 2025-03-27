@@ -207,16 +207,14 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
           </p>
         )}
         
-        {/* Top Up Credits button - only show for valid keys */}
+        {/* Upgrade Plan button - only show for valid keys */}
         {usageData && (
           <div className="mt-4">
             <button
-              onClick={() => plugin.openTopUpCreditsModal()}
+              onClick={() => plugin.openUpgradePlanModal()}
               className="w-full bg-[--interactive-accent] text-[--text-on-accent] px-4 py-2 rounded hover:bg-[--interactive-accent-hover] transition-colors"
             >
-              {usageData.tokenUsage >= usageData.maxTokenUsage ? 
-                "Upgrade Plan" : 
-                "Top Up Credits"}
+              Upgrade Plan
             </button>
           </div>
         )}

@@ -1292,7 +1292,7 @@ export default class FileOrganizer extends Plugin {
     }
   }
 
-  openTopUpCreditsModal() {
+  openUpgradePlanModal() {
     // Get the server domain from settings
     const serverUrl = this.getServerUrl();
     
@@ -1300,13 +1300,13 @@ export default class FileOrganizer extends Plugin {
     // This pattern transforms "https://app.notecompanion.ai/api" into "https://app.notecompanion.ai"
     const serverDomain = serverUrl.replace(/\/api\/?$/, '');
     
-    // Use the server domain for the top-up URL
-    const topUpUrl = `${serverDomain}/onboarding`;
+    // Use the server domain for the upgrade URL
+    const upgradeUrl = `${serverDomain}/onboarding`;
     
     // Log the URL being opened (helpful for debugging)
-    logger.debug(`Opening top-up credits URL: ${topUpUrl}`);
+    logger.debug(`Opening upgrade plan URL: ${upgradeUrl}`);
     
     // Open the URL in a browser
-    window.open(topUpUrl, '_blank');
+    window.open(upgradeUrl, '_blank');
   }
 }
