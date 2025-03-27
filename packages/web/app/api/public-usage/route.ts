@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       tokenUsage: userUsage[0].tokenUsage || 0,
       maxTokenUsage: userUsage[0].maxTokenUsage || 100000,
       subscriptionStatus: userUsage[0].subscriptionStatus || "inactive",
-      currentPlan: userUsage[0].currentProduct || "Free Tier",
+      currentPlan: userUsage[0].currentPlan || "Free Tier",
       isActive: userUsage[0].subscriptionStatus === "active"
     });
     

@@ -42,6 +42,7 @@ const handleSubscription = async (
         subscriptionStatus: "active",
         paymentStatus: "paid", 
         maxTokenUsage: 5000 * 1000, // Ensure token limit is updated on upgrade
+        billingCycle: metadata.type,
         lastPayment: new Date(),
         currentPlan: metadata.plan,
         currentProduct: metadata.type,
