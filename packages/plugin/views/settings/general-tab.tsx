@@ -191,10 +191,10 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({ plugin, userId, email })
             </div>
             {usageData && usageData.tokenUsage >= usageData.maxTokenUsage && (
               <div className="mt-2 p-3 bg-[--background-] bg-opacity-20 rounded text-[--text-error] text-sm">
-                <strong>Token limit reached!</strong> You've used all your available tokens for this month. Next reset is on the 1st of the next month.
+                <strong>Token limit reached!</strong> You've used all your tokens for this month. Next reset is on the 1st of the coming month.
                 <br />
                 <br />
-                Please upgrade your plan to continue using Note Companion's AI features now.
+                Upgrade your plan if you'd like to to continue using Note Companion.
 
               </div>
             )}
