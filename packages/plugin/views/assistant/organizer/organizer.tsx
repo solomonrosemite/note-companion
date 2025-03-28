@@ -98,7 +98,15 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const refreshContext = React.useCallback(() => {
     setRefreshKey(prevKey => prevKey + 1);
     setError(null);
-    updateActiveFile();
+    
+    // Force reset the state variables that determine what's displayed
+    setActiveFile(null);
+    setNoteContent("");
+    
+    // Then update the active file with fresh checks
+    setTimeout(() => {
+      updateActiveFile();
+    }, 50); // Small delay to ensure state is cleared before updating
   }, [updateActiveFile]);
 
   const renderSection = React.useCallback(
@@ -128,47 +136,81 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   // Then check license
   if (!isLicenseValid) {
     return (
-      <LicenseValidator
-        apiKey={plugin.settings.API_KEY}
-        onValidationComplete={() => setIsLicenseValid(true)}
-        plugin={plugin}
-      />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <LicenseValidator
+          apiKey={plugin.settings.API_KEY}
+          onValidationComplete={() => setIsLicenseValid(true)}
+          plugin={plugin}
+        />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <EmptyState
-        message={`Error: ${error}. Click refresh to try again.`}
-        showRefresh={true}
-        onRefresh={refreshContext}
-      />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <EmptyState
+          message={`Error: ${error}. Click refresh to try again.`}
+          showRefresh={false}
+          onRefresh={refreshContext}
+        />
+      </div>
     );
   }
 
   if (!activeFile) {
-    return <EmptyState message="Open a file " />;
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <EmptyState message="Open a file " />
+      </div>
+    );
   }
+  
   if (isInIgnoredPatterns) {
     return (
-      <EmptyState message="This file is part of an ignored folder and will not be processed." />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <EmptyState message="This file is part of an ignored folder and will not be processed." />
+      </div>
     );
   }
 
   if (isMediaFile) {
     return (
-      <EmptyState message="To process an image or audio file, move it to the Note Companion Inbox Folder (e.g. for image text extraction or audio transcription)." />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <EmptyState message="To process an image or audio file, move it to the Note Companion Inbox Folder (e.g. for image text extraction or audio transcription)." />
+      </div>
     );
   }
+  
   if (!noteContent.trim()) {
     return (
-      <EmptyState
-        message="This file is empty. Add some content and click refresh to see AI suggestions."
-        showRefresh={true}
-        onRefresh={refreshContext}
-        showDelete={true}
-        onDelete={handleDelete}
-      />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-3 items-center">
+          <RefreshButton onRefresh={refreshContext} />
+        </div>
+        <EmptyState
+          message="This file is empty. Add some content and click refresh to see AI suggestions."
+          showRefresh={false}
+          onRefresh={refreshContext}
+          showDelete={true}
+          onDelete={handleDelete}
+        />
+      </div>
     );
   }
 
