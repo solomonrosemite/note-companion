@@ -82,7 +82,7 @@ export function PricingCards() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto px-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4 justify-center">
       {/* Free Tier */}
       <div className="relative group h-full">
         <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary/40 group-hover:via-primary/25 group-hover:to-primary/40 transition-all duration-300" />
@@ -95,8 +95,7 @@ export function PricingCards() {
             </div>
             <h3 className="text-2xl font-semibold mb-4">Free Tier</h3>
             <div className="h-[88px] flex flex-col justify-end mb-8">
-              <span className="text-4xl font-bold">$0</span>
-              <span className="text-muted-foreground ml-1">/forever</span>
+              <span className="text-4xl font-bold">Free</span>
             </div>
             <div className="space-y-3 mb-8">
               {plans.freeTier.features.map((feature, index) => renderFeature(feature, index, 'freeTier'))}
@@ -111,7 +110,7 @@ export function PricingCards() {
       </div>
 
       {/* Self-Hosted */}
-      <div className="relative group h-full">
+      {/* <div className="relative group h-full">
       <div className="absolute -inset-0.5 border border-2 border-black-500 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary/40 group-hover:via-primary/25 group-hover:to-primary/40 transition-all duration-300" />
       <div className="relative h-full rounded-2xl bg-background/100 backdrop-blur-sm p-6 flex flex-col justify-between">
           <div>
@@ -134,7 +133,7 @@ export function PricingCards() {
             </Button>
           </Link>
         </div>
-      </div>
+      </div> */}
 
       {/* Subscription - Most Popular */}
       <div className="relative group h-full">
