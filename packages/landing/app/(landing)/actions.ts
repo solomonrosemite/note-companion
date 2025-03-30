@@ -23,8 +23,8 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
       };
     }
 
-    const response = await fetch('https://app.loops.so/api/v1/contacts/create', {
-      method: 'POST',
+    const response = await fetch('https://app.loops.so/api/v1/contacts/update', {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
@@ -61,4 +61,4 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
       message: 'Network error. Please check your connection and try again.'
     };
   }
-}  
+}    
