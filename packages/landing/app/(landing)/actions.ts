@@ -14,12 +14,30 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
   }
 
   try {
-    const response = await fetch('https://app.loops.so/api/newsletter-form/cll1aiw7700kimn0o0o4qtnwi', {
+    const apiKey = process.env.LOOPS_API_KEY;
+    if (!apiKey) {
+      console.error('LOOPS_API_KEY environment variable is not set');
+      return {
+        success: false,
+        message: 'Server configuration error. Please try again later.'
+      };
+    }
+
+    const response = await fetch('https://app.loops.so/api/v1/contacts/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({
+        email,
+        subscribed: true,
+        userGroup: 'MobileUsers', // Assign users to the MobileUsers group
+        source: 'mobile_beta_signup',
+        mailingLists: {
+          "cm8qkg9g9015e0it80bmo4baz": true
+        }
+      }),
     });
     
     const data = await response.json();
@@ -30,9 +48,10 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
         message: 'Thank you for joining the beta waitlist!'
       };
     } else {
+      console.error('Loops API error:', data);
       return {
         success: false,
-        message: 'Something went wrong. Please try again.'
+        message: data.message || 'Something went wrong. Please try again.'
       };
     }
   } catch (error) {
@@ -42,4 +61,4 @@ export async function submitBetaRequest(email: string): Promise<SubmitBetaReques
       message: 'Network error. Please check your connection and try again.'
     };
   }
-} 
+}  
