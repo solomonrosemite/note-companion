@@ -103,7 +103,6 @@ export const ExperimentTab: React.FC<ExperimentTabProps> = ({ plugin }) => {
                       <p className="text-[--text-muted]">Currently supports:</p>
                       <ul className="list-disc pl-4 text-[--text-muted]">
                         <li>Any Ollama local model (e.g. Llama 3.2, Deepseek r1)</li>
-                
                       </ul>
                       <p className="text-xs text-[--text-faint]">
                         More models coming soon
