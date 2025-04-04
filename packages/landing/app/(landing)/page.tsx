@@ -340,18 +340,18 @@ export default function Page() {
             {/* <p className="text-lg text-muted-foreground mb-12">
               Whether you're a solo note-taker or a power user looking for advanced features, we've got you covered.
             </p> */}
-            {/* <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
+            <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
               <p className="text-[#1570EF]">
                 Educators and students qualify for a 50% discount on the Lifetime plan or a special Monthly rate of $9. To claim this offer, please reach out at alex@fileorganizer2000.com via your education email.
               </p>
-            </div> */}
+            </div>
             
             {/* ScreenPipe Promotion */}
-            <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
+            {/* <div className="bg-[#EBF5FF] border-1 border-[#2E90FA] rounded-lg p-4 mb-12 max-w-3xl mx-auto text-center">
             <p className="text-[#1570EF]">
                 <span className="font-bold">Limited Time Offer:</span> All purchases until March 31st include a free copy of <a href="https://screenpi.pe" className="underline font-medium">ScreenPipe</a> (+ ~$200 worth of credits) — the perfect add-on for enhanced meeting notes!
               </p>
-            </div>
+            </div> */}
           </div>
           <PricingCards />
         </div>
