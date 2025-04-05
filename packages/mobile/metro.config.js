@@ -23,9 +23,11 @@ module.exports = withTurborepoManagedCache(
  * @returns {import('expo/metro-config').MetroConfig}
  */
 function withMonorepoPaths(config) {
+  console.log("withMonorepoPaths", config);
   // eslint-disable-next-line no-undef
   const projectRoot = __dirname;
   const workspaceRoot = path.resolve(projectRoot, "../..");
+  console.log("workspaceRoot", workspaceRoot);
 
   // #1 - Watch all files in the monorepo
   config.watchFolders = [workspaceRoot];

@@ -23,6 +23,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.notecompanion.app",
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
+          NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+        },
+      ],
+    },
     usesIcloudStorage: false,
     usesAppleSignIn: true,
     config: {
@@ -86,7 +94,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           { mimeType: "image/*" },
           { mimeType: "application/pdf" },
           { mimeType: "application/msword" },
-          { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+          {
+            mimeType:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          },
         ],
       },
       {
@@ -97,7 +108,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           { mimeType: "image/*" },
           { mimeType: "application/pdf" },
           { mimeType: "application/msword" },
-          { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+          {
+            mimeType:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          },
         ],
       },
     ],
@@ -107,7 +121,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundler: "metro",
   },
   plugins: [
-    'expo-apple-authentication',
+    "expo-apple-authentication",
     "expo-router",
     "expo-secure-store",
     "expo-file-system",
@@ -145,7 +159,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
         ios: {
           useFrameworks: "static",
-          syncPlugins: false
+          syncPlugins: false,
         },
       },
     ],
@@ -162,7 +176,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     router: {
       origin: false,
     },
-    "eas": {
+    eas: {
       projectId: "c9b885bf-2dc7-4e11-9db2-2bde79a19ed1",
     },
   },
