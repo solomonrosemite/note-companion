@@ -126,6 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-secure-store",
     "expo-file-system",
     "expo-asset",
+    "expo-share-intent",
     [
       "expo-document-picker",
       {

@@ -13,17 +13,28 @@ Note Companion is a mobile app that helps you capture, organize, and enhance you
 
 ## Getting Started
 
+**Important:** All commands below must be run from within the `packages/mobile` directory.
+
 1. Install dependencies
 
    ```bash
-   npm install
+   pnpm install
    ```
 
 2. Start the app
 
    ```bash
-    npx expo start
+   # For Android
+   pnpm android
+
+   # For iOS
+   pnpm ios
+
+   # Or start the development server
+   pnpm start # Alias for npx expo start
    ```
+
+**Development Bounty:** We are offering $50 to the first person who can refactor the mobile setup to allow building and running *perfectly* directly from the monorepo root (e.g., `pnpm run android` from the top level). See the main project README for more context.
 
 ## Privacy & Security
 
