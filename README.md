@@ -1,6 +1,6 @@
 # Note Companion AI (prev. File Organizer 2000)
 
-Note Companion is an AI-powered Obsidian plugin that automatically organizes and formats your notes—so you don’t have to.
+Note Companion is an AI-powered Obsidian plugin that automatically organizes and formats your notes—so you don't have to.
 
 <p>
   <a href="https://notecompanion.ai/"><img src="https://img.shields.io/badge/Try-Note%20Companion-7852ee?style=flat&logoColor=white" alt="Try Note Companion"></a>
@@ -88,14 +88,25 @@ This is a monorepo using pnpm workspaces and Turborepo. To get started:
    pnpm build
    ```
 3. Development commands:
-   - Start web development server: `cd packages/web && pnpm dev`
-   - Build plugin: `cd packages/plugin && pnpm build`
-   - Build audio server: `cd packages/audio-server && pnpm build`
+   - Start web development server: `pnpm --filter web dev`
+   - Build plugin: `pnpm --filter plugin build`
+   - Build audio server: `pnpm --filter audio-server build`
+   - **Mobile App (Expo):**
+     - Navigate to the mobile package: `cd packages/mobile`
+     - Install dependencies: `pnpm install` (run inside `packages/mobile`)
+     - Run Android: `pnpm android` (run inside `packages/mobile`)
+     - Run iOS: `pnpm ios` (run inside `packages/mobile`)
+     - Start development server: `pnpm start` (run inside `packages/mobile`)
+
 The project consists of the following packages:
 - `packages/plugin`: The Obsidian plugin
-- `packages/web`: The web application
+- `packages/web`: The web application (Next.js)
+- `packages/mobile`: The mobile application (React Native/Expo)
 - `packages/audio-server`: Audio transcription server
 - `packages/shared`: Shared utilities and types
+
+**Mobile Development Bounty:** We are offering $50 to the first person who can refactor the mobile setup to allow building and running *perfectly* directly from the monorepo root (e.g., `pnpm run android` from the top level instead of having to `cd` into `packages/mobile`). This likely involves adjusting `turbo.json` and potentially Expo configurations.
+
 For the tech-savvies who would like to play around with different models, there is a promptfoo.yaml file in the project including examples with local LLMs.
 See link for more info: https://promptfoo.dev/docs/configuration/guide/
 
@@ -148,7 +159,7 @@ Get suggestions and choose what to apply with the Assistant view. Here's how to 
 1. Click on the Assistant View Icon or set up the "Show Assistant" hotkey to open the Sidebar
 2. Select any of your files and choose which changes to apply
 
-<img width="1277" alt="Screenshot 2024-05-24 at 11 42 17 PM" src="https://github.com/different-ai/file-organizer-2000/assets/46509400/dc06a61f-64d0-4e10-898d-3e0330004e94">
+<img width="1277" alt="Screenshot 2024-05-24 at 11 42 17 PM" src="https://github.com/different-ai/file-organizer-2000/assets/46509400/dc06a61f-64d0-4e10-898d-3e0330004e94">
 
 ### B. AI Inbox
 
@@ -176,5 +187,5 @@ See video: https://www.youtube.com/watch?v=rommuUXRgUw&t=17s
 
 To use llama 3.2 with the ai chat, install Ollama + llama 3.2 and check this setting in the plugin:
 
-<img width="751" alt="Screenshot 2024-10-26 at 7 34 18 PM" src="https://github.com/user-attachments/assets/95add737-9cd5-4cb4-a360-ff5fc95ebfa7">
+<img width="751" alt="Screenshot 2024-10-26 at 7 34 18 PM" src="https://github.com/user-attachments/assets/95add737-9cd5-4cb4-a360-ff5fc95ebfa7">
 
