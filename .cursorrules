@@ -70,6 +70,7 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 
 * Use playwright tools to take screenshots and verify the implementation. (e.g. browser_navigate, browser_snapshot, browser_press_key, browser_take_screenshot, browser_type, etc)
 * Use playwright to do complex search in the web. 
+* Note: Playwright can only be used to test the `/packages/web` and `/packages/landing` applications. It cannot test the Obsidian plugin or the mobile app.
 
 ## Github
 
