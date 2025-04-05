@@ -55,7 +55,7 @@ web-development: packages/web/** - Web package information
 # Instructions
 
 During your interaction with the user, maintain this file as a scratchpad to organize your thoughts. When receiving a new task:
-1. Review memory files and scratchpad content
+1. Review scratchpad. Check /memory directory for relevant file names before starting.
 2. Clear old unrelated task notes if necessary
 3. Explain the new task and plan the steps needed to complete it
 4. Use todo markers to track progress:
