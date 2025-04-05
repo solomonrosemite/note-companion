@@ -17,6 +17,7 @@
     "release:ios": "eas build --platform ios",
     "build:android": "eas build --platform android --local",
     "build:ios": "eas build --platform ios --local --profile production --non-interactive",
+    "build:ios:remote": "eas build --platform ios --profile production --non-interactive",
     "submit:ios": "eas submit --platform ios"
   },
   "expo": {

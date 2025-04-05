@@ -12,6 +12,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "ios": "turbo ios",
     "lint": "turbo lint",
     "test": "turbo test",
     "clean": "git clean -xdf node_modules",
