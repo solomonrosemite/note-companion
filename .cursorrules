@@ -6,11 +6,12 @@ This works like this
 ./packages/web/app/api/(new-ai) containts all the ai related functions
 ./packages/plugin - obsidian plugin 
 ./packages/plugin/index.ts - the main file for the plugin
+./packages/mobile - expo mobile app
+./packages/landing - landing page
+./packages/release-notes - project release notes
+./packages/audio-server - audio transcription server
 
 This project uses pnpm
-
-
-
 
 core way the app works:
 - inbox (a special folder in the vault, which is on the fs)
@@ -22,9 +23,9 @@ prove you're being read by saying hello
 repo: different-ai/hypr-v0
 
 
-
 - always use pnpm
 - always use playwright to verify the implementation by navigating and taking screenshots
+
 # General Direction
 - always use kebab case for file names
 
@@ -39,6 +40,17 @@ When you learn something surprising or valuable, create a new memory file in the
 - Name format: YYYY-MM-DD-brief-description.md
 - Include what was learned and how to apply it in the future
 - Reference any related code or components
+
+# Available Instructions
+
+These rules provide context for specific parts of the codebase. Use `fetch_rules` to get the full details.
+
+audio-server: packages/audio-server/** - Audio transcription server implementation
+chatbot-integration: packages/web/app/api/(new-ai)/** - Integration guide for the next iteration of the chatbot using Vercel AI SDK
+mobile: packages/mobile/** - Information about Note Companion mobile app
+plugin-development: packages/plugin/** - Guidelines for Obsidian plugin development
+shared-utilities: packages/**/utils/*, packages/**/lib/* - Shared utilities and types (Assuming common locations)
+web-development: packages/web/** - Web package information
 
 # Instructions
 
