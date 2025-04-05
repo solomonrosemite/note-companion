@@ -12,7 +12,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
-import { useShareIntent } from "expo-share-intent";
+// TODO: Uncomment to re-enable share intent functionality
+// import { useShareIntent } from "expo-share-intent";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ProcessingStatus } from "@/components/processing-status";
 import { 
@@ -33,10 +34,13 @@ export default function HomeScreen() {
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [status, setStatus] = useState<UploadStatus>("idle");
   const params = useLocalSearchParams<{ sharedFile?: string }>();
-  const { shareIntent } = useShareIntent();
+  // TODO: Uncomment to re-enable share intent functionality
+  // const { shareIntent } = useShareIntent();
   const primaryColor = useSemanticColor('primary');
   const insets = useSafeAreaInsets();
 
+  // TODO: Uncomment this useEffect block to re-enable share intent functionality
+  /*
   useEffect(() => {
     // Handle shared content
     const handleSharedContent = async () => {
@@ -98,6 +102,7 @@ export default function HomeScreen() {
 
     handleSharedContent();
   }, [shareIntent]);
+  */
 
   useEffect(() => {
     // Handle shared file if present

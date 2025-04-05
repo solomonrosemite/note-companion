@@ -133,25 +133,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      "expo-share-intent",
-      {
-        iosActivationRules: {
-          NSExtensionActivationSupportsWebURLWithMaxCount: 1,
-          NSExtensionActivationSupportsWebPageWithMaxCount: 1,
-          NSExtensionActivationSupportsImageWithMaxCount: 1,
-          NSExtensionActivationSupportsMovieWithMaxCount: 0,
-          NSExtensionActivationSupportsText: true,
-        },
-        androidMimeTypes: [
-          "text/*",
-          "image/*",
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ],
-      },
-    ],
-    [
       "expo-build-properties",
       {
         android: {
