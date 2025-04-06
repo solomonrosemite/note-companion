@@ -36,7 +36,7 @@ repo: different-ai/hypr-v0
 
 # Memory System
 
-When you learn something surprising or valuable, create a new memory file in the /memory directory:
+When you learn something surprising (e.g. you thought someone was a certain way but they are not), create a new memory file in the /memory directory:
 - Name format: YYYY-MM-DD-brief-description.md
 - Include what was learned and how to apply it in the future
 - Reference any related code or components
@@ -75,3 +75,19 @@ Update the progress in the Scratchpad when finishing subtasks. After completing 
 ## Github
 
 * Use github tools to check repository issues and get repository info.
+
+
+## MCP Tools
+
+Playwright:
+for testing packages/web use port 3010
+benjamin.shafii+testinglove@gmail.com
+
+Database query:
+Say querying "dev" database.
+use neon tool to query project name: file-organizer-2000-dev
+project id: mute-snow-96515814
+
+you can use 
+database name: verceldb
+packages/web/drizzle/schema.ts to get the schema of the database

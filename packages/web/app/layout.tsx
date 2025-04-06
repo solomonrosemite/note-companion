@@ -1,9 +1,7 @@
-import { ClerkProvider, SignedIn, SignedOut, SignIn, UserButton } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { PHProvider } from "./providers";
-import Logo from "@/components/ui/logo";
-import { Toaster } from "react-hot-toast";
-import { NavigationBar } from "@/components/navigation-bar";
+import AuthLayoutWrapper from "@/components/auth-layout-wrapper";
 
 import "./globals.css";
 import Link from "next/link";
@@ -19,49 +17,26 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return process.env.ENABLE_USER_MANAGEMENT == "true" ? (
+  const enableUserManagement = process.env.ENABLE_USER_MANAGEMENT === "true";
+
+  if (!enableUserManagement) {
+     return (
+        <html lang="en" className="light">
+            <body className="light">{children}</body>
+        </html>
+     );
+  }
+  
+  return (
     <ClerkProvider afterSignOutUrl="/sign-in">
       <html lang="en" className="light">
+        <body className="light">
         <PHProvider>
-          <SignedIn>
-            <body className="light">
-              <Toaster />
-              <header className="p-4 bg-white sticky top-0 z-50 max-w-6xl mx-auto">
-                <nav className="max-w-9xl mx-auto flex items-center space-x-6 justify-between w-full">
-                  <div className="flex items-center space-x-6">
-                    <Link href="/" className="flex-shrink-0">
-                      <Logo />
-                    </Link>
-                    <NavigationBar />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ExtraUserSettings />
-                    <UserButton />
-                  </div>
-                </nav>
-              </header>
-              <main className="min-h-screen text-stone-900 font-sans">
-                {children}
-              </main>
-            </body>
-          </SignedIn>
-          <SignedOut>
-            <body className="light">
-              <Toaster />
-              <main className="min-h-screen text-stone-900 font-sans">
-                <div className="flex items-center justify-center h-screen">
-                  <SignIn />
-                </div>
-              </main>
-            </body>
-          </SignedOut>
+          <AuthLayoutWrapper>{children}</AuthLayoutWrapper>
         </PHProvider>
+        </body>
       </html>
     </ClerkProvider>
-  ) : (
-    <html lang="en" className="light">
-      <body className="light">{children}</body>
-    </html>
   );
 }
 
