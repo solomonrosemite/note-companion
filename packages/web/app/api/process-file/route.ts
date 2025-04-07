@@ -276,7 +276,7 @@ async function processImageWithGPT4o(
         {
           role: "system",
           content:
-            "Extract all text from this image. Be comprehensive and maintain original formatting where possible. Use newlines and line breaks to separate text.",
+            "Extract all text from this image. Be comprehensive and preserve the original formatting, including paragraphs, line breaks, bullet points, and any other structural elements.",
         },
         {
           role: "user",
