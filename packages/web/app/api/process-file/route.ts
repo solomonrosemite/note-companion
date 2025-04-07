@@ -276,7 +276,7 @@ async function processImageWithGPT4o(
         {
           role: "system",
           content:
-            "Extract all text from this image. Be comprehensive and maintain original formatting where possible.",
+            "Extract all text from this image. Be comprehensive and maintain original formatting where possible. Use newlines and line breaks to separate text.",
         },
         {
           role: "user",
@@ -608,40 +608,6 @@ export async function POST(request: NextRequest) {
             );
             textContent = extractedContent.textContent;
             tokensUsed = extractedContent.tokensUsed;
-
-            // Post-process the text to clean it up
-            if (textContent) {
-              // Remove excessive whitespace
-              textContent = textContent.replace(/\s+/g, " ").trim();
-
-              // Fix common OCR errors
-              textContent = textContent
-                .replace(/(\w)-\s+(\w)/g, "$1$2") // Fix hyphenated words that shouldn't be
-                .replace(/(\d),(\d)/g, "$1.$2") // Fix commas that should be decimal points in numbers
-                .replace(/(\d)\.(\d{3})/g, "$1,$2"); // Fix decimal points that should be commas in numbers
-
-              console.log(
-                "Post-processed text, final length:",
-                textContent.length
-              );
-            }
-          }
-
-          // Post-process the text to clean it up
-          if (textContent) {
-            // Remove excessive whitespace
-            textContent = textContent.replace(/\s+/g, " ").trim();
-
-            // Fix common OCR errors
-            textContent = textContent
-              .replace(/(\w)-\s+(\w)/g, "$1$2") // Fix hyphenated words that shouldn't be
-              .replace(/(\d),(\d)/g, "$1.$2") // Fix commas that should be decimal points in numbers
-              .replace(/(\d)\.(\d{3})/g, "$1,$2"); // Fix decimal points that should be commas in numbers
-
-            console.log(
-              "Post-processed text, final length:",
-              textContent.length
-            );
           }
         } catch (ocrError: unknown) {
           console.error("OCR processing error:", ocrError);

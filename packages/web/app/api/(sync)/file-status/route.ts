@@ -78,18 +78,6 @@ export async function GET(request: NextRequest) {
     // Ensure proper response structure before sending
     const response = result as FileStatusResponse;
     
-    // If the text field contains stringified JSON, try to parse it
-    if (response.text && response.text.trim().startsWith('{') && response.text.trim().endsWith('}')) {
-      try {
-        // Parse the text field if it's a JSON string
-        const parsedText = JSON.parse(response.text);
-        response.text = parsedText;
-      } catch (e) {
-        // If parsing fails, leave as is - it might be valid text that just happens to start/end with curly braces
-        console.log('Text field appears to be JSON but failed to parse:', e);
-      }
-    }
-
     return NextResponse.json(response);
   } catch (error) {
     console.error("Status check error:", error);

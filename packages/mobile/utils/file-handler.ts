@@ -38,7 +38,7 @@ export interface SharedFile {
 
 export interface UploadResult {
   status: UploadStatus;
-  text?: string | { extractedText?: string; visualElements?: any };
+  text?: string | { extractedText?: string; visualElements?: unknown };
   error?: string;
   fileId?: number | string;
   url?: string;
@@ -71,15 +71,7 @@ export const prepareFile = async (
   fileUri: string | null;
 }> => {
   // Determine filename
-  let fileName: string;
-  let fileExtension: string | undefined;
-  
-  if (file.uri) {
-    const uriParts = file.uri.split('.');
-    fileExtension = uriParts[uriParts.length - 1].toLowerCase();
-  }
-  
-  fileName = file.name || `shared-${Date.now()}.${file.mimeType?.split('/')[1] || fileExtension || 'file'}`;
+  const fileName = file.name || `shared-${Date.now()}.${file.mimeType?.split('/')[1] || file.uri?.split('.').pop() || 'file'}`;
   
   // Determine mimetype
   let mimeType: string;
@@ -89,7 +81,8 @@ export const prepareFile = async (
     mimeType = file.mimeType;
   } 
   // Otherwise, try to determine from extension
-  else if (fileExtension) {
+  else if (file.uri) {
+    const fileExtension = file.uri.split('.').pop()?.toLowerCase();
     switch (fileExtension) {
       case 'jpg':
       case 'jpeg':
@@ -371,7 +364,7 @@ export const pollForResults = async (fileId: string, token: string, maxAttempts 
   ];
   
   while (attempts < maxAttempts) {
-    let endpointIndex = attempts % endpoints.length;
+    const endpointIndex = attempts % endpoints.length;
     const endpoint = endpoints[endpointIndex];
     
     try {
@@ -491,29 +484,6 @@ export const handleFileProcess = async (
       
       // Poll for results
       const result = await pollForResults(fileIdStr, token);
-      
-      // Clean up duplicate image references if text content exists
-      if (result.status === 'completed' && result.text) {
-        // Get filename safely, ensuring we have a valid string
-        const filename = file.name ? (file.name.split('/').pop() || file.name) : '';
-        
-        if (filename) {
-          // Create pattern to match standard markdown image syntax for this file
-          const stdMarkdownPattern = new RegExp(`!\\[.*?\\]\\(.*?${escapeRegExp(filename)}.*?\\)`, 'g');
-          
-          // Create pattern to match Obsidian wiki-style links for this file
-          const obsidianWikiPattern = new RegExp(`!\\[\\[.*?${escapeRegExp(filename)}.*?\\]\\]`, 'g');
-          
-          // Check if Obsidian wiki-style links exist and result.text is a string
-          if (typeof result.text === 'string' && obsidianWikiPattern.test(result.text)) {
-            // Remove standard markdown image references for the same file
-            result.text = result.text.replace(stdMarkdownPattern, '');
-            
-            // Clean up any double newlines that might have been created
-            result.text = result.text.replace(/\n\n\n+/g, '\n\n').trim();
-          }
-        }
-      }
       
       // Add URL from the upload response if available
       if (uploadData.url) {
@@ -676,7 +646,7 @@ export const processSyncQueue = async (token: string): Promise<boolean> => {
     
     // Read queue
     const queueData = await FileSystem.readAsStringAsync(SYNC_QUEUE_FILE);
-    let queue: string[] = JSON.parse(queueData);
+    const queue: string[] = JSON.parse(queueData);
     
     if (queue.length === 0) {
       return false; // Queue is empty
@@ -700,7 +670,7 @@ export const processSyncQueue = async (token: string): Promise<boolean> => {
     const metadata = JSON.parse(metadataRaw);
     
     // Create a SharedFile object
-    let sharedFile: SharedFile = {
+    const sharedFile: SharedFile = {
       name: metadata.name,
       mimeType: metadata.mimeType,
     };
