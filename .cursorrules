@@ -20,9 +20,10 @@ core way the app works:
 
 
 prove you're being read by saying hello
-repo: different-ai/hypr-v0
+repo: different-ai/note-companion
 
 
+- if you create mocks, make sure to add a /memory to so user can fix it in the future also tell the user at the end.
 - always use pnpm
 - always use playwright to verify the implementation by navigating and taking screenshots
 
