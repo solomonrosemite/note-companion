@@ -253,14 +253,14 @@ function extractTextFromOCRResponse(ocrResponse: OCRResponse): {
   }
 }
 
-// Helper function to process image with GPT-4o
+// Helper function to process image with gpt-4.1
 async function processImageWithGPT4o(
   imageUrl: string
 ): Promise<{ textContent: string; tokensUsed: number }> {
   try {
-    console.log("Processing image with GPT-4o...");
+    console.log("Processing image with gpt-4.1...");
 
-    // Call the vision API with GPT-4o
+    // Call the vision API with gpt-4.1
     // use generateObject from vercel ai sdk
 
     const openai = createOpenAI({
@@ -268,7 +268,7 @@ async function processImageWithGPT4o(
     });
 
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4.1"),
       schema: z.object({
         markdown: z.string(),
       }),
@@ -290,7 +290,7 @@ async function processImageWithGPT4o(
     const tokensUsed = 0;
 
     console.log(
-      `GPT-4o extracted ${textContent.length} characters, used ${tokensUsed} tokens`
+      `gpt-4.1 extracted ${textContent.length} characters, used ${tokensUsed} tokens`
     );
 
     return {
@@ -298,9 +298,9 @@ async function processImageWithGPT4o(
       tokensUsed,
     };
   } catch (error) {
-    console.error("Error processing image with GPT-4o:", error);
+    console.error("Error processing image with gpt-4.1:", error);
     return {
-      textContent: `Error processing image with GPT-4o: ${
+      textContent: `Error processing image with gpt-4.1: ${
         error instanceof Error ? error.message : String(error)
       }`,
       tokensUsed: 0,
