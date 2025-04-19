@@ -144,39 +144,38 @@ export const prepareFile = async (
 };
 
 /**
- * Uploads a file to the server using the server's Vercel Blob integration
+ * Uploads a file to the server using the new presigned URL flow for R2
  */
 export const uploadFile = async (
-  file: SharedFile, 
+  file: SharedFile,
   token: string
 ): Promise<UploadResponse> => {
   try {
-    // Add detailed logging about the file being processed
+    console.log("Starting presigned URL upload flow...");
     console.log('Input file properties:', {
       hasTextContent: !!file.text,
       mimeType: file.mimeType,
       name: file.name,
-      uri: file.uri ? (file.uri.substring(0, 20) + '...') : undefined,
+      uri: file.uri ? (file.uri.substring(0, 50) + '...') : undefined,
     });
-    
+
     const { fileName, mimeType, fileUri } = await prepareFile(file);
-    
-    // Log the prepared file properties
+
     console.log('Prepared file properties:', {
       fileName,
       mimeType,
-      fileUri: fileUri ? (fileUri.substring(0, 20) + '...') : undefined,
+      fileUri: fileUri ? (fileUri.substring(0, 50) + '...') : undefined,
       platform: Platform.OS,
     });
-    
-    // For text content, implement a more robust handling strategy
+
+    // --- Handle Text Content Separately (Upload directly) ---
     if ((mimeType === 'text/markdown' || mimeType === 'text/plain') && file.text) {
-      console.log('Text content detected, handling locally');
-      
-      // Run content moderation check
+      console.log('Text content detected, handling via direct upload endpoint');
+      // NOTE: Keep the existing text upload logic for simplicity for now.
+      // This avoids needing a separate processing path for text vs. binary files
+      // in the background worker initially.
+
       const moderationResult = await moderateContent(file.text);
-      
-      // If content doesn't pass moderation, reject it
       if (!moderationResult.isAppropriate) {
         console.log('Content moderation failed:', moderationResult.reason);
         return {
@@ -185,332 +184,400 @@ export const uploadFile = async (
           error: 'Content failed moderation check. Please review and resubmit.'
         };
       }
-      
-      try {
-        // Try to upload to server first
-        const textUploadResponse = await fetch(`${API_URL}/api/upload`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: fileName,
-            type: mimeType,
-            content: file.text,
-            contentType: 'text',
-            isPlainText: true
-          }),
-          // Add a timeout to prevent hanging if server is unavailable
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
 
-        if (textUploadResponse.ok) {
-          const textUploadResult = await textUploadResponse.json();
-          console.log('Text upload result:', textUploadResult);
-          
-          return {
-            success: true,
-            fileId: textUploadResult.fileId,
-            status: 'completed',
-            text: file.text,
-            url: textUploadResult.url
-          };
-        }
-        
-        // If server upload failed, fall back to local handling
-        console.log('Server upload failed, using local text handling');
-      } catch (error) {
-        // Server upload failed or timed out, fall back to local handling
-        console.log('Server communication error, using local text handling:', error);
+      // Using the *original* /api/upload endpoint specifically for text for now
+      const textUploadResponse = await fetch(`${API_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: fileName,
+          type: mimeType,
+          content: file.text,
+          contentType: 'text',
+          isPlainText: true
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+
+      if (!textUploadResponse.ok) {
+        const errorData = await textUploadResponse.json().catch(() => ({ error: 'Text upload failed' }));
+        throw new Error(errorData.error || 'Text upload failed');
       }
-      
-      // Fall back to local handling with a local ID
-      // This ID won't be used for server operations, just for local tracking
-      const localId = `local-text-${Date.now()}`;
-      
-      // For text content, we can return immediately with the text content
-      // since there's no need for OCR processing
+
+      const textUploadResult = await textUploadResponse.json();
+      console.log('Direct text upload result:', textUploadResult);
       return {
         success: true,
-        fileId: localId,
-        status: 'completed',
-        text: file.text
+        fileId: textUploadResult.fileId, // This ID should be processable by /api/process-file
+        status: 'completed', // Text is considered complete on upload
+        text: file.text,
+        url: textUploadResult.url,
+        mimeType: mimeType, // Pass along mimeType
+        fileName: fileName, // Pass along fileName
       };
     }
-    
-    // For non-text content, continue with regular file upload
-    // Ensure we have a valid fileUri before proceeding
+    // --- End Text Content Handling ---
+
+    // --- Binary File Upload via Presigned URL ---
+    console.log('Handling binary file upload via presigned URL');
     if (!fileUri) {
       throw new Error('No valid file URI available for upload');
     }
-    
-    // For React Native environment, we'll use a different approach than browser File objects
-    const fileContent = await FileSystem.readAsStringAsync(
-      fileUri,
-      { encoding: FileSystem.EncodingType.Base64 }
-    );
-    
-    console.log('File content base64 stats:', {
-      contentLength: fileContent?.length,
-      contentPrefix: fileContent?.substring(0, 30) + '...',
-      isValidBase64: /^[A-Za-z0-9+/=]+$/.test(fileContent?.substring(0, 100) || ''),
-    });
-    
-    // Send to our API endpoint which will handle the Vercel Blob upload
-    const uploadResponse = await fetch(`${API_URL}/api/upload`, {
+
+    // 1. Get presigned URL from our backend
+    console.log('Fetching presigned URL...');
+    const presignedUrlResponse = await fetch(`${API_URL}/api/create-upload-url`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        name: fileName,
-        type: mimeType,
-        base64: fileContent,
-        contentType: 'base64'
-      }),
+      body: JSON.stringify({ filename: fileName, contentType: mimeType }),
     });
 
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse
-        .json()
-        .catch(() => ({ error: 'Upload failed' }));
-      throw new Error(errorData.error || 'Upload failed');
+    if (!presignedUrlResponse.ok) {
+      const errorData = await presignedUrlResponse.json().catch(() => ({ error: 'Failed to get presigned URL' }));
+      throw new Error(errorData.error || 'Failed to get presigned URL');
     }
 
-    const result = await uploadResponse.json();
-    console.log('Upload result:', result);
+    const { uploadUrl, key, publicUrl } = await presignedUrlResponse.json();
+    console.log('Received presigned URL details:', { key, publicUrl: publicUrl?.substring(0, 50) + '...' });
+
+    if (!uploadUrl || !key || !publicUrl) {
+        throw new Error('Invalid response from create-upload-url endpoint');
+    }
+
+    // 2. Upload file directly to R2 using the presigned URL
+    console.log('Uploading file directly to R2...');
+    const uploadResult = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+      httpMethod: 'PUT',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        // Important: Set the content type header for the S3 PUT request
+        'Content-Type': mimeType,
+        // Remove Authorization header as it's not needed for the presigned URL
+        // 'Authorization': `Bearer ${token}`, <--- REMOVE THIS
+      },
+    });
+
+    console.log('R2 upload status:', uploadResult.status);
+    // Check if upload to R2 was successful (typically 200 OK)
+    if (uploadResult.status < 200 || uploadResult.status >= 300) {
+        console.error('R2 Upload failed:', uploadResult.body);
+        throw new Error(`Direct upload to R2 failed with status ${uploadResult.status}`);
+    }
+    console.log('File uploaded successfully to R2');
+
+    // 3. Notify backend that upload is complete
+    console.log('Notifying backend of completed upload...');
+    const recordUploadResponse = await fetch(`${API_URL}/api/record-upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ key, publicUrl, originalName: fileName, fileType: mimeType }),
+    });
+
+    if (!recordUploadResponse.ok) {
+      const errorData = await recordUploadResponse.json().catch(() => ({ error: 'Failed to record upload' }));
+      throw new Error(errorData.error || 'Failed to record upload');
+    }
+
+    const recordResult = await recordUploadResponse.json();
+    console.log('Backend notified, record result:', recordResult);
 
     return {
       success: true,
-      fileId: result.fileId,
-      status: result.status || 'uploaded',
-      url: result.url
+      fileId: recordResult.fileId, // The ID generated by our backend
+      status: 'pending', // Status is pending until background worker processes it
+      url: publicUrl, // The public URL of the file in R2
+      mimeType: mimeType, // Pass along mimeType
+      fileName: fileName, // Pass along fileName
     };
+    // --- End Binary File Handling ---
+
   } catch (error) {
-    console.error('Error in uploadFile:', error);
-    throw error;
+    console.error('Error in uploadFile (presigned URL flow):', error);
+    // Return a structured error response
+    return {
+      success: false,
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown upload error'
+    };
   }
 };
 
 /**
  * Process the file on the server to extract text content and metadata
+ * NOTE: This function might become less relevant or change if processing
+ * is solely handled by the background worker.
+ * For now, it might trigger the worker or be used for text files.
  */
-export const processFile = async (fileId: string, token: string): Promise<void> => {
+export const processFile = async (fileId: string | number, token: string): Promise<void> => {
   try {
-    console.log("Processing file with ID:", fileId);
-    
-    // If it's a local text ID, we don't need server processing
-    if (fileId.startsWith('local-text-')) {
-      console.log('Local text ID detected, skipping server processing');
+    // Ensure fileId is a string for the API call
+    const fileIdStr = String(fileId);
+    console.log("Requesting processing for file ID:", fileIdStr);
+
+    // If it's a local text ID (should be handled by uploadFile now), maybe skip?
+    // Or let the endpoint handle it if it still exists.
+    if (fileIdStr.startsWith('local-text-')) {
+      console.log('Local text ID detected in processFile, skipping server processing call.');
       return;
     }
-    
+
+    // Call the existing /api/process-file endpoint.
+    // The background worker might make this redundant for R2 uploads later.
     const response = await fetch(`${API_URL}/api/process-file`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ fileId }),
+      body: JSON.stringify({ fileId: fileIdStr }), // Send as string
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Error processing file: ${response.status} ${response.statusText}`, errorText);
-      throw new Error(`Failed to process file: ${response.statusText}`);
+      console.error(`Error triggering file processing: ${response.status} ${response.statusText}`, errorText);
+      // Decide if this should throw or just log, depending on whether the background worker is the primary path
+      // For now, logging the error.
+      // throw new Error(`Failed to trigger file processing: ${response.statusText}`);
+      console.warn("Failed to trigger processing via /api/process-file. Background worker should handle it.");
+    } else {
+       console.log("File processing request sent successfully (or already processed)");
     }
 
-    // Success!
-    console.log("File processing request sent successfully");
   } catch (error) {
-    console.error('Error in processFile:', error);
-    throw error;
+    console.error('Error in processFile request:', error);
+    // Depending on strategy, might not throw here if background worker is primary
+     console.warn("Error sending processing request via /api/process-file. Background worker should handle it.");
+    // throw error;
   }
 };
 
 /**
  * Polls the server for results of file processing
+ * This now needs to poll a new status endpoint for R2 uploads
  */
-export const pollForResults = async (fileId: string, token: string, maxAttempts = 30): Promise<UploadResult> => {
-  // If it's a local text ID, we don't need to poll
-  if (fileId.startsWith('local-text-')) {
-    console.log('Local text ID detected, returning completed status without polling');
-    // For local text, we don't need to poll, since the text is already available
-    return {
-      status: 'completed',
-      // We don't have the text here, but the caller (handleFileProcess) 
-      // should already have it from the upload function
-      fileId
-    };
-  }
-  
-  let attempts = 0;
-  
-  // Log the fileId being used for polling
-  console.log("Polling for results with fileId:", fileId);
+export const pollForResults = async (
+    fileId: string | number,
+    token: string,
+    isTextFile: boolean = false, // Flag to know if it was a direct text upload
+    maxAttempts = 30,
+    initialDelay = 2000,
+    pollInterval = 3000
+  ): Promise<UploadResult> => {
 
-  // Define possible endpoints to try
-  const endpoints = [
-    // Try POST to /api/files/[id] first (since the logs show this is what was attempted)
-    { url: `${API_URL}/api/files/${fileId}`, method: 'POST' },
-    // Try GET with the same endpoint
-    { url: `${API_URL}/api/files/${fileId}`, method: 'GET' },
-    // Try the file-status endpoint with query parameter
-    { url: `${API_URL}/api/file-status?fileId=${fileId}`, method: 'GET' },
-    // Try file status with POST
-    { url: `${API_URL}/api/file-status`, method: 'POST', body: { fileId } }
-  ];
-  
+  // Ensure fileId is a string for API calls
+  const fileIdStr = String(fileId);
+
+  // If it was a direct text upload, it should already be 'completed'
+  // We shouldn't need to poll for text files handled by the direct upload endpoint
+  if (isTextFile) {
+    console.log('Text file detected, skipping polling as it should be complete.');
+    // We need to fetch the final details though, as the initial return might lack text
+    // Let's use the new status endpoint for consistency
+     try {
+        const statusResponse = await fetch(`${API_URL}/api/get-upload-status/${fileIdStr}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!statusResponse.ok) {
+           throw new Error(`Failed to get initial status for text file: ${statusResponse.statusText}`);
+        }
+        const finalResult = await statusResponse.json();
+        return {
+           ...finalResult, // Spread the properties from the status endpoint
+           status: finalResult.status || 'completed', // Ensure status is set
+           fileId: fileIdStr,
+        };
+     } catch (error) {
+        console.error("Error fetching final status for text file:", error);
+        return {
+            status: 'error',
+            error: 'Failed to get final details for text file',
+            fileId: fileIdStr,
+        };
+     }
+  }
+
+  // --- Polling for R2 Uploads --- 
+  let attempts = 0;
+  console.log("Polling for R2 processing results with fileId:", fileIdStr);
+
+  // Wait an initial delay before starting to poll
+  await new Promise(resolve => setTimeout(resolve, initialDelay));
+
   while (attempts < maxAttempts) {
-    const endpointIndex = attempts % endpoints.length;
-    const endpoint = endpoints[endpointIndex];
-    
     try {
-      console.log(`Trying endpoint (${attempts + 1}/${maxAttempts}):`, endpoint.url, endpoint.method);
-      
-      // Configure fetch options based on the method
-      const fetchOptions: RequestInit = {
-        method: endpoint.method,
+      console.log(`Polling attempt ${attempts + 1}/${maxAttempts} for file ${fileIdStr}...`);
+
+      const response = await fetch(`${API_URL}/api/get-upload-status/${fileIdStr}`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      };
-      
-      // Add body for POST requests
-      if (endpoint.method === 'POST' && endpoint.body) {
-        fetchOptions.headers = {
-          ...fetchOptions.headers,
-          'Content-Type': 'application/json'
-        };
-        fetchOptions.body = JSON.stringify(endpoint.body);
-      }
-      
-      const response = await fetch(endpoint.url, fetchOptions);
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Error polling for results: ${response.status} ${response.statusText}`, errorText);
-        
-        // If not found or method not allowed, try the next endpoint
-        if (response.status === 404 || response.status === 405) {
+        console.error(`Error polling status: ${response.status} ${response.statusText}`, errorText);
+
+        // If not found yet, just wait and retry
+        if (response.status === 404) {
+          console.log(`File ${fileIdStr} not found yet, retrying...`);
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Shorter wait between endpoint attempts
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
           continue;
         }
-        
-        // For other errors, wait longer and try again
+        // For other errors, maybe stop polling or retry differently
+        // For now, just retry after interval
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
         continue;
       }
 
       const result = await response.json();
-      console.log("Poll result:", result);
+      console.log("Poll status result:", result);
 
-      // If we got a successful response, save this endpoint for future attempts
-      // to avoid trying other endpoints
-      if (result) {
-        // Keep using this successful endpoint for future polling
-        endpoints.splice(0, endpoints.length, endpoint);
-      }
-
-      // If status is completed or error, return the result
+      // Check the status field from the response
       if (result.status === 'completed' || result.status === 'error') {
-        return result;
+         // Ensure fileId is included in the final result
+         return {
+           ...result,
+           fileId: fileIdStr,
+         };
+      } else if (result.status === 'processing' || result.status === 'pending') {
+        // Still processing, wait and poll again
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      } else {
+        // Unexpected status
+        console.warn(`Unexpected status received: ${result.status}`);
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
 
-      // Otherwise wait and try again
-      attempts++;
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retrying
     } catch (error) {
-      console.error('Error in pollForResults:', error);
+      console.error('Error during pollForResults fetch:', error);
       attempts++;
-      
-      // If we've reached max attempts, throw an error
+      // If we've reached max attempts after an error, return error
       if (attempts >= maxAttempts) {
-        throw new Error('Max polling attempts reached');
+        return {
+            status: 'error',
+            error: 'Max polling attempts reached after error',
+            fileId: fileIdStr
+        };
       }
-      
-      // Otherwise wait and try again
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait before retrying after an error
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
   }
 
-  // If we get here, we've hit max attempts
+  // If loop finishes without success/error status
   return {
     status: 'error',
-    error: 'Timed out waiting for processing results'
+    error: 'Timed out waiting for processing results',
+    fileId: fileIdStr
   };
 };
 
 /**
- * Handles the entire file processing workflow: upload, process, and poll for results
+ * Handles the entire file processing workflow: upload, (optionally trigger process), and poll for results
  */
 export const handleFileProcess = async (
   file: SharedFile,
   token: string,
-  onStatusChange?: (status: UploadStatus) => void,
+  onStatusChange?: (status: UploadStatus, details?: { fileId?: string | number, url?: string, mimeType?: string, fileName?: string }) => void,
 ): Promise<UploadResult> => {
+  let uploadData: UploadResponse | null = null;
+  let result: UploadResult;
+
   try {
-    // Update status to uploading
     onStatusChange?.('uploading');
-    
-    // Upload file
-    const uploadData = await uploadFile(file, token);
-    
-    // Check if this is a local text file that's already been processed
-    const fileIdStr = String(uploadData.fileId || '');
-    if (fileIdStr.startsWith('local-text-') && uploadData.text) {
-      // For local text files, we already have the text content and don't need server processing
-      console.log('Local text file already processed, skipping server steps');
-      onStatusChange?.('completed');
-      return {
-        status: 'completed',
-        text: uploadData.text,
-        fileId: uploadData.fileId
-      };
+
+    uploadData = await uploadFile(file, token);
+
+    if (!uploadData.success || !uploadData.fileId) {
+      // If upload itself failed, report error immediately
+      throw new Error(uploadData.error || 'File upload failed without specific error');
     }
     
-    // Update status to processing
-    onStatusChange?.('processing');
-    
-    // Only process if we have a valid fileId
-    if (uploadData.fileId) {
-      // Process file - ensure fileId is string
-      const fileIdStr = String(uploadData.fileId);
-      await processFile(fileIdStr, token);
-      
-      // Poll for results
-      const result = await pollForResults(fileIdStr, token);
-      
-      // Add URL from the upload response if available
-      if (uploadData.url) {
-        result.url = uploadData.url;
-      }
-      
-      // Update final status
-      onStatusChange?.(result.status);
-      
-      return result;
+    // Notify with details after successful upload initiation
+    onStatusChange?.('processing', { 
+      fileId: uploadData.fileId, 
+      url: uploadData.url, 
+      mimeType: uploadData.mimeType, 
+      fileName: uploadData.fileName 
+    });
+
+    // Determine if it was a text file upload (based on mime type in response)
+    const isTextFile = uploadData.mimeType?.startsWith('text/') ?? false;
+
+    // If it's a text file uploaded directly, it's already considered completed
+    if (isTextFile && uploadData.status === 'completed') {
+        console.log("Text file upload completed directly.");
+        result = {
+            status: 'completed',
+            text: uploadData.text, // Text should be in the uploadData for text files
+            fileId: uploadData.fileId,
+            url: uploadData.url,
+            mimeType: uploadData.mimeType,
+            fileName: uploadData.fileName,
+        };
     } else {
-      // Handle case where fileId is undefined
-      const errorResult: UploadResult = {
-        status: 'error',
-        error: 'No file ID returned from upload'
-      };
-      onStatusChange?.('error');
-      return errorResult;
+        // For binary files (or text files needing server processing if flow changes),
+        // poll for results using the new status endpoint
+        console.log(`Polling for results for fileId: ${uploadData.fileId}`);
+        result = await pollForResults(uploadData.fileId, token, false); // Pass isTextFile=false for R2 uploads
     }
+
+    // Add details from uploadData if missing in poll result
+    if (result.status !== 'error' && uploadData.url && !result.url) {
+        result.url = uploadData.url;
+    }
+     if (result.status !== 'error' && uploadData.mimeType && !result.mimeType) {
+        result.mimeType = uploadData.mimeType;
+    }
+     if (result.status !== 'error' && uploadData.fileName && !result.fileName) {
+        result.fileName = uploadData.fileName;
+    }
+
+    onStatusChange?.(result.status, { 
+        fileId: result.fileId, 
+        url: result.url, 
+        mimeType: result.mimeType, 
+        fileName: result.fileName 
+    });
+    return result;
+
   } catch (error) {
-    console.error('File processing error:', error);
-    const errorResult: UploadResult = {
+    console.error('handleFileProcess error:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Failed to process file';
+    // Attempt to get fileId even in case of error
+    const fileIdOnError = uploadData?.fileId;
+    result = {
       status: 'error',
-      error: error instanceof Error ? error.message : 'Failed to process file'
+      error: errorMsg,
+      fileId: fileIdOnError,
+      url: uploadData?.url,
+      mimeType: uploadData?.mimeType,
+      fileName: uploadData?.fileName,
     };
-    onStatusChange?.('error');
-    return errorResult;
+    onStatusChange?.('error', { 
+        fileId: result.fileId, 
+        url: result.url, 
+        mimeType: result.mimeType, 
+        fileName: result.fileName 
+    });
+    return result;
   }
 };
 
@@ -643,19 +710,19 @@ export const processSyncQueue = async (token: string): Promise<boolean> => {
     if (!queueInfoExists.exists) {
       return false; // No queue exists yet
     }
-    
+
     // Read queue
     const queueData = await FileSystem.readAsStringAsync(SYNC_QUEUE_FILE);
-    const queue: string[] = JSON.parse(queueData);
-    
+    let queue: string[] = JSON.parse(queueData);
+
     if (queue.length === 0) {
       return false; // Queue is empty
     }
-    
+
     // Get the next item
     const localId = queue[0];
     const fileDir = `${PENDING_UPLOADS_DIR}${localId}/`;
-    
+
     // Check if the file directory exists
     const dirInfo = await FileSystem.getInfoAsync(fileDir);
     if (!dirInfo.exists) {
@@ -664,98 +731,127 @@ export const processSyncQueue = async (token: string): Promise<boolean> => {
       await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
       return queue.length > 0; // Return true if there are more items
     }
-    
+
     // Read metadata
     const metadataRaw = await FileSystem.readAsStringAsync(`${fileDir}metadata.json`);
     const metadata = JSON.parse(metadataRaw);
-    
+
+    // Don't re-process if already completed or errored too recently
+    if (metadata.status === 'completed') {
+        console.log(`Skipping already completed file ${localId}`);
+        queue.shift();
+        await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
+        return queue.length > 0;
+    }
+    // Add logic here to check metadata.lastAttempt if status is 'error' to avoid rapid retries
+    // const retryThreshold = 5 * 60 * 1000; // e.g., 5 minutes
+    // if (metadata.status === 'error' && metadata.lastAttempt && (Date.now() - new Date(metadata.lastAttempt).getTime()) < retryThreshold) {
+    //     console.log(`Skipping recently errored file ${localId}`);
+    //     // Optionally move to end instead of skipping forever
+    //     // queue.push(queue.shift());
+    //     // await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
+    //     return queue.length > 0;
+    // }
+
     // Create a SharedFile object
     const sharedFile: SharedFile = {
       name: metadata.name,
       mimeType: metadata.mimeType,
     };
-    
-    // If it's text content, read from content.txt
-    const contentPath = `${fileDir}content.txt`;
-    const contentExists = await FileSystem.getInfoAsync(contentPath);
-    if (contentExists.exists) {
-      sharedFile.text = await FileSystem.readAsStringAsync(contentPath);
+
+    // Find the content file
+    const contentPathTxt = `${fileDir}content.txt`;
+    const contentInfoTxt = await FileSystem.getInfoAsync(contentPathTxt);
+    let contentFileUri: string | undefined;
+
+    if (contentInfoTxt.exists) {
+      // Text file saved locally
+      sharedFile.text = await FileSystem.readAsStringAsync(contentPathTxt);
+      // Even for text, we might need a file URI for the upload function if it expects one
+      // For the new flow, text is handled separately, so this might not be needed
     } else {
-      // Find the file in the directory (first file that's not metadata.json)
+      // Find the binary file in the directory
       const dirContents = await FileSystem.readDirectoryAsync(fileDir);
-      const fileNames = dirContents.filter(name => name !== 'metadata.json' && name !== 'content.txt');
-      
+      const fileNames = dirContents.filter(name => !name.endsWith('.json') && !name.endsWith('.txt'));
+
       if (fileNames.length > 0) {
-        sharedFile.uri = `${fileDir}${fileNames[0]}`;
+        contentFileUri = `${fileDir}${fileNames[0]}`;
+        sharedFile.uri = contentFileUri;
       } else {
-        // No file found, remove from queue and skip
+        console.error(`No content file found for ${localId}, removing from queue.`);
+        metadata.status = 'error';
+        metadata.error = 'Local content file missing';
+        await FileSystem.writeAsStringAsync(`${fileDir}metadata.json`, JSON.stringify(metadata));
         queue.shift();
         await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
         return queue.length > 0;
       }
     }
-    
-    // Try to process the file with the server
+
+    // Try to process the file using the updated handleFileProcess
     try {
-      console.log(`Processing queued file ${localId}`);
-      const result = await handleFileProcess(sharedFile, token);
-      
-      // If successful, remove from queue
+      console.log(`Processing queued file ${localId} with handleFileProcess...`);
+      // Use handleFileProcess which now incorporates the new flow
+      const result = await handleFileProcess(sharedFile, token, (status, details) => {
+          console.log(`Sync Queue Status Update for ${localId}: ${status}`, details);
+          // Update metadata status in real-time if needed
+          if (metadata.status !== status) {
+             metadata.status = status;
+             if (details?.fileId) metadata.serverFileId = details.fileId;
+             // Avoid writing too frequently here, maybe only on final states
+             // FileSystem.writeAsStringAsync(`${fileDir}metadata.json`, JSON.stringify(metadata));
+          }
+      });
+
+      metadata.lastAttempt = new Date().toISOString();
+
+      // Update metadata based on final result
       if (result.status === 'completed') {
-        // Save the result in the metadata
         metadata.status = 'completed';
         metadata.serverFileId = result.fileId;
-        metadata.text = result.text;
+        // If text was processed, store it (or a reference)
+        if (typeof result.text === 'string') {
+            metadata.processedTextPreview = generateTextPreview(result.text, 50); // Store preview
+        } else if (result.text?.extractedText) {
+             metadata.processedTextPreview = generateTextPreview(result.text.extractedText, 50);
+        }
         metadata.processedAt = new Date().toISOString();
-        
-        await FileSystem.writeAsStringAsync(
-          `${fileDir}metadata.json`,
-          JSON.stringify(metadata)
-        );
-        
-        // Remove from queue
-        queue.shift();
+        metadata.error = undefined; // Clear previous errors
+
+        await FileSystem.writeAsStringAsync(`${fileDir}metadata.json`, JSON.stringify(metadata));
+        queue.shift(); // Remove from queue on success
         await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
         console.log(`Successfully processed queued file ${localId}`);
+
       } else if (result.status === 'error') {
-        // Save the error in the metadata
         metadata.status = 'error';
-        metadata.error = result.error;
-        metadata.lastAttempt = new Date().toISOString();
-        
-        await FileSystem.writeAsStringAsync(
-          `${fileDir}metadata.json`,
-          JSON.stringify(metadata)
-        );
-        
-        // Move to the end of the queue to try again later
-        queue.shift();
-        queue.push(localId);
+        metadata.error = result.error || 'Unknown processing error';
+
+        await FileSystem.writeAsStringAsync(`${fileDir}metadata.json`, JSON.stringify(metadata));
+        // Move to the end of the queue on error
+        queue.push(queue.shift()!); // Move failed item to the end
         await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
-        console.log(`Error processing queued file ${localId}, will retry later:`, result.error);
+        console.log(`Error processing queued file ${localId}, moved to end of queue:`, result.error);
       }
-    } catch (error) {
-      console.error(`Error processing queued file ${localId}:`, error);
-      
-      // Save the error in the metadata
+      // else: still processing, leave it in the queue
+
+    } catch (processError) {
+      console.error(`Critical error processing queued file ${localId}:`, processError);
       metadata.status = 'error';
-      metadata.error = error instanceof Error ? error.message : 'Unknown error';
+      metadata.error = processError instanceof Error ? processError.message : 'Critical processing error';
       metadata.lastAttempt = new Date().toISOString();
-      
-      await FileSystem.writeAsStringAsync(
-        `${fileDir}metadata.json`,
-        JSON.stringify(metadata)
-      );
-      
-      // Move to the end of the queue to try again later
-      queue.shift();
-      queue.push(localId);
+
+      await FileSystem.writeAsStringAsync(`${fileDir}metadata.json`, JSON.stringify(metadata));
+       // Move to the end of the queue on critical error
+      queue.push(queue.shift()!); // Move failed item to the end
       await FileSystem.writeAsStringAsync(SYNC_QUEUE_FILE, JSON.stringify(queue));
     }
-    
+
     return queue.length > 0; // Return true if there are more items
+
   } catch (error) {
-    console.error('Error processing sync queue:', error);
+    console.error('Error processing sync queue item:', error);
+    // If we had an error reading the queue itself, maybe return false to stop processing
     return false;
   }
 };
