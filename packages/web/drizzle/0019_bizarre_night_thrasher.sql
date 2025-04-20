@@ -1,0 +1,1 @@
+ALTER TABLE "uploaded_files" ADD COLUMN "r2_key" text;

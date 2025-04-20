@@ -134,6 +134,13 @@
       "when": 1742757975927,
       "tag": "0018_previous_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1745166573076,
+      "tag": "0019_bizarre_night_thrasher",
+      "breakpoints": true
     }
   ]
 }
