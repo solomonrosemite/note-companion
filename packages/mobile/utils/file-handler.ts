@@ -713,7 +713,7 @@ export const processSyncQueue = async (token: string): Promise<boolean> => {
 
     // Read queue
     const queueData = await FileSystem.readAsStringAsync(SYNC_QUEUE_FILE);
-    let queue: string[] = JSON.parse(queueData);
+    const queue: string[] = JSON.parse(queueData);
 
     if (queue.length === 0) {
       return false; // Queue is empty

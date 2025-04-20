@@ -30,6 +30,15 @@ const r2Client = new S3Client({
 });
 
 export async function POST(request: NextRequest) {
+  console.log("--- Create Upload URL Start ---"); // Add start marker
+  console.log("Checking R2 Env Vars:", {
+      R2_BUCKET: process.env.R2_BUCKET ? 'Loaded' : 'MISSING',
+      R2_ENDPOINT: process.env.R2_ENDPOINT ? 'Loaded' : 'MISSING',
+      R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID ? 'Loaded' : 'MISSING',
+      R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY ? 'Loaded' : 'MISSING',
+      R2_PUBLIC_URL: process.env.R2_PUBLIC_URL ? process.env.R2_PUBLIC_URL : 'MISSING or Undefined'
+  });
+
   try {
     const authResult = await handleAuthorizationV2(request);
     const userId = authResult.userId;
@@ -68,6 +77,7 @@ export async function POST(request: NextRequest) {
     // Construct the public URL (adjust based on your R2 public access setup)
     // This assumes a custom domain or standard R2 public URL pattern.
     // If your bucket isn't public, you might need another mechanism (e.g., signed GET URLs)
+    console.log("R2_PUBLIC_URL from env:", process.env.R2_PUBLIC_URL);
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`; // Example public URL
 
     return NextResponse.json({ uploadUrl, key, publicUrl });

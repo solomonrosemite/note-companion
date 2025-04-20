@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleAuthorizationV2 } from "@/lib/handleAuthorization";
 import { db, uploadedFiles } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, is } from "drizzle-orm";
 
 // Define the structure of the expected URL parameters
 interface RouteContext {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -19,7 +17,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const fileIdStr = context.params.id;
+    const fileIdStr = (await context.params).id;
     if (!fileIdStr) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }

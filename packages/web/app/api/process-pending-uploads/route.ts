@@ -153,8 +153,10 @@ async function processImageWithGPT4o(imageUrl: string): Promise<{ textContent: s
     // ... (rest of processImageWithGPT4o function - same as in process-file/route.ts)
     console.log("Processing image with gpt-4.1...");
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // log url
+    console.log(`Processing image with gpt-4.1: ${imageUrl}`);
     const { object, usage } = await generateObject({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4.1"),
       schema: z.object({ markdown: z.string() }),
       messages: [
         { role: "system", content: "Extract all text comprehensively, preserving formatting." },
