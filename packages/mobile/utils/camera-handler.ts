@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Linking, Platform } from 'react-native';
+import { handleFileProcess, UploadStatus, SharedFile } from '@/utils/file-handler'; // Import necessary types/functions
 
 // Function to request camera permissions
 const requestCameraPermissions = async (): Promise<boolean> => {
@@ -39,34 +40,60 @@ const requestMediaLibraryPermissions = async (): Promise<boolean> => {
   return true;
 };
 
-// Function to launch the camera
-export const launchCamera = async (): Promise<string | null> => {
+// Update launchCamera to handle the full upload process
+export const launchCameraAndUpload = async (
+  getToken: () => Promise<string | null>,
+  setStatus: (status: UploadStatus) => void
+): Promise<void> => { // Return void as status is handled via callback
   const hasCameraPermission = await requestCameraPermissions();
-  if (!hasCameraPermission) return null;
+  if (!hasCameraPermission) return;
 
-  // Optionally request media library permission if you plan to save automatically
-  // const hasMediaLibraryPermission = await requestMediaLibraryPermissions();
-  // if (!hasMediaLibraryPermission) return null; 
+  // Media library permission might be implicitly needed by handleFileProcess or saving steps
+  // Let's request it proactively, especially for Android
+  await requestMediaLibraryPermissions();
 
   try {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false, // Or true if you want editing
-      aspect: [4, 3], // Optional aspect ratio
-      quality: 0.8, // Image quality (0 to 1)
+      allowsEditing: false,
+      aspect: [4, 3],
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      console.log('Image taken:', result.assets[0].uri);
-      // TODO: Handle the taken image URI (e.g., save it, process it)
-      return result.assets[0].uri;
+      console.log('Image taken, proceeding to upload:', result.assets[0].uri);
+      
+      // Get token before processing
+      const token = await getToken();
+      if (!token) {
+        throw new Error("Authentication required for upload.");
+      }
+
+      // Prepare file object conforming to SharedFile
+      const fileToUpload: SharedFile = {
+        uri: result.assets[0].uri,
+        name: result.assets[0].fileName || `photo-${Date.now()}.jpg`, // Generate a name if missing
+        mimeType: result.assets[0].mimeType || 'image/jpeg', // Default to jpeg if missing
+      };
+
+      // Call handleFileProcess directly from here
+      setStatus('idle'); // Reset status before starting
+      const uploadResult = await handleFileProcess(fileToUpload, token, setStatus);
+      
+      // Status is already set by the callback within handleFileProcess
+      console.log('Upload process finished with status:', uploadResult.status);
+      if(uploadResult.status === 'error') {
+         Alert.alert('Upload Failed', uploadResult.error || 'Could not process the photo.');
+      }
+
     } else {
       console.log('Camera Canceled');
-      return null;
+      // Optionally set status back to idle if needed, though usually no status change is expected on cancel
+      // setStatus('idle');
     }
   } catch (error) {
-    console.error('Error launching camera:', error);
-    Alert.alert('Error', 'Could not open camera.');
-    return null;
+    console.error('Error launching camera or uploading:', error);
+    setStatus('error'); // Set status to error
+    Alert.alert('Error', error instanceof Error ? error.message : 'Could not process the photo.');
   }
 }; 

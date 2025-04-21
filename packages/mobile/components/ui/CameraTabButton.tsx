@@ -1,22 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TouchableOpacity,
   View,
   StyleSheet,
   Platform,
   AccessibilityRole,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { launchCamera } from '@/utils/camera-handler'; // Adjust path as needed
+import { launchCameraAndUpload } from '@/utils/camera-handler';
 import { useSemanticColor } from '@/hooks/useThemeColor';
 import * as Haptics from 'expo-haptics';
+import { useAuth } from '@clerk/clerk-expo';
+import { UploadStatus } from '@/utils/file-handler';
 
 interface CameraTabButtonProps {
   accessibilityLabel?: string;
   accessibilityRole?: AccessibilityRole;
-  accessibilityState?: any; // Adjust type as needed based on react-navigation types
-  // We don't need onPress from props, as this button has a specific action
-  // onPress?: (e: any) => void;
+  accessibilityState?: any;
   children: React.ReactNode;
 }
 
@@ -24,35 +25,43 @@ const CameraTabButton: React.FC<CameraTabButtonProps> = ({
   accessibilityLabel = 'Take Photo',
   accessibilityRole = 'button',
   accessibilityState,
-  children, // children here would typically be the Icon component passed by Tabs.Screen
+  children,
 }) => {
   const primaryColor = useSemanticColor('primary');
   const backgroundColor = useSemanticColor('tabBar');
+  const { getToken } = useAuth();
+  const [status, setStatus] = useState<UploadStatus>('idle');
 
   const handlePress = async () => {
+    if (status !== 'idle' && status !== 'completed' && status !== 'error') {
+      console.log('Upload already in progress...');
+      return;
+    }
+
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    console.log('Camera button pressed, attempting to launch camera...');
-    const imageUri = await launchCamera();
-    if (imageUri) {
-      console.log('Successfully took photo:', imageUri);
-      // TODO: Navigate or handle the image URI
-    }
+    console.log('Camera button pressed, attempting to launch camera and upload...');
+    
+    await launchCameraAndUpload(getToken, setStatus);
   };
 
-  // Style the button to potentially look different (e.g., centered, larger)
-  // For now, we use a simple TouchableOpacity wrapper
+  const isUploading = status === 'uploading' || status === 'processing';
+
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor }]}
       onPress={handlePress}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}
-      accessibilityState={accessibilityState}
+      accessibilityState={{ ...accessibilityState, busy: isUploading }}
+      disabled={isUploading}
     >
-      {/* We render the children passed by Tabs.Screen, which is the icon */}
-      {children}
+      {isUploading ? (
+        <ActivityIndicator size="small" color={primaryColor} />
+      ) : (
+        children
+      )}
     </TouchableOpacity>
   );
 };
