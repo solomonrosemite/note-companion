@@ -133,6 +133,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="camera"
+        options={{
+          title: 'Capture',
+          tabBarIcon: (props) => renderTabIcon(props, 'camera-alt'),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            console.log("Camera tab pressed!");
+          },
+        }}
+      />
+      <Tabs.Screen
         name="sync"
         options={{
           title: 'Sync',

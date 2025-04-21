@@ -27,7 +27,6 @@
       }
     }
   },
-  "packageManager": "pnpm@9.15.8",
   "dependencies": {
     "@babel/runtime": "7.26.9",
     "@clerk/clerk-expo": "^0.20.1",
@@ -64,8 +63,8 @@
     "expo-web-browser": "^14.0.1",
     "nativewind": "^4.1.23",
     "patch-package": "^8.0.0",
-    "react": "^18.3.1",
-    "react-dom": "18.3.1",
+    "react": "catalog:react18",
+    "react-dom": "catalog:react18",
     "react-native": "0.76.9",
     "react-native-blob-util": "^0.21.2",
     "react-native-gesture-handler": "~2.20.2",
@@ -81,7 +80,9 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/jest": "29.5.12",
-    "@types/react": "^18.3.12",
+    "@types/react": "catalog:react18",
+    "@types/react-dom": "catalog:react18",
+
     "@types/react-test-renderer": "18.0.7",
     "babel-plugin-module-resolver": "^5.0.2",
     "jest": "29.7.0",
