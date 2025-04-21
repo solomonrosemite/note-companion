@@ -126,41 +126,64 @@ export default function HomeScreen() {
   }, [params.sharedFile]);
 
   const uploadFiles = async (files: SharedFile[]) => {
-    try {
-      // Reset state
-      setStatus("uploading");
-      setUploadResults([]);
+    setStatus("uploading");
+    setUploadResults(
+      files.map(file => ({
+        fileName: file.name,
+        mimeType: file.mimeType,
+        status: 'uploading',
+        text: undefined,
+        fileUrl: undefined,
+        error: undefined,
+      }))
+    );
 
-      const token = await getToken();
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const results: (UploadResult | null)[] = [];
-      let overallStatus: UploadStatus = "completed";
-
-      for (const file of files) {
-        const result = await handleFileProcess(
-          file,
-          token,
-          (newStatus) => setStatus(newStatus)
-        );
-        results.push(result);
-        if (result.status === "error") {
-          overallStatus = "error";
-        }
-      }
-
-      setUploadResults(results);
-      setStatus(overallStatus);
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploadResults([{
-        status: "error",
-        error: error instanceof Error ? error.message : "Upload failed",
-      }]);
+    const token = await getToken();
+    if (!token) {
       setStatus("error");
+      setUploadResults(files.map(file => ({
+        fileName: file.name,
+        mimeType: file.mimeType,
+        status: 'error',
+        error: 'Authentication required',
+        text: undefined,
+        fileUrl: undefined,
+      })));
+      console.error("Authentication required");
+      return;
     }
+
+    let uploadsInitiated = 0;
+    let initiationFailed = false;
+
+    files.forEach((file, index) => {
+      handleFileProcess(file, token, (s) => {
+        // This callback from handleFileProcess might still be useful for intermediate steps
+        // console.log(`Status update for ${file.name}: ${s}`);
+        // We could update individual file status here if needed, but keeping it simple for now
+      })
+        .then(result => {
+          uploadsInitiated++;
+          console.log(`Processing initiated for ${file.name}:`, result.status);
+          // Optionally update the specific file's result in state if needed, e.g.:
+          // setUploadResults(prev => prev.map((r, i) => i === index ? { ...r, ...result, status: result.status } : r));
+
+          if (uploadsInitiated === files.length && !initiationFailed) {
+            setStatus('processing');
+          }
+        })
+        .catch(error => {
+          uploadsInitiated++;
+          initiationFailed = true;
+          console.error(`Error initiating processing for ${file.name}:`, error);
+          setUploadResults(prev => prev.map((r, i) => i === index ? {
+            ...r,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Failed to start processing'
+          } : r));
+          setStatus("error");
+        });
+    });
   };
 
   const pickDocument = async () => {
@@ -176,11 +199,15 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error picking document:", error);
+      setStatus("error");
       setUploadResults([{
         status: "error",
-        error: error instanceof Error ? error.message : "Failed to pick document"
+        error: error instanceof Error ? error.message : "Failed to pick document",
+        fileName: undefined,
+        mimeType: undefined,
+        text: undefined,
+        fileUrl: undefined,
       }]);
-      setStatus("error");
     }
   };
 
@@ -189,11 +216,15 @@ export default function HomeScreen() {
       const { status: permissionStatus } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionStatus !== "granted") {
+        setStatus("error");
         setUploadResults([{
           status: "error",
           error: "Gallery permission denied",
+          fileName: undefined,
+          mimeType: undefined,
+          text: undefined,
+          fileUrl: undefined,
         }]);
-        setStatus("error");
         return;
       }
 
@@ -210,11 +241,15 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error picking photos:", error);
+      setStatus("error");
       setUploadResults([{
         status: "error",
-        error: error instanceof Error ? error.message : "Failed to pick photos"
+        error: error instanceof Error ? error.message : "Failed to pick photos",
+        fileName: undefined,
+        mimeType: undefined,
+        text: undefined,
+        fileUrl: undefined,
       }]);
-      setStatus("error");
     }
   };
 
@@ -223,11 +258,15 @@ export default function HomeScreen() {
       const { status: cameraStatus } =
         await ImagePicker.requestCameraPermissionsAsync();
       if (cameraStatus !== "granted") {
+        setStatus("error");
         setUploadResults([{
           status: "error",
-          error: "Camera permission denied"
+          error: "Camera permission denied",
+          fileName: undefined,
+          mimeType: undefined,
+          text: undefined,
+          fileUrl: undefined,
         }]);
-        setStatus("error");
         return;
       }
 
@@ -242,11 +281,15 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error taking photo:", error);
+      setStatus("error");
       setUploadResults([{
         status: "error",
-        error: error instanceof Error ? error.message : "Failed to take photo"
+        error: error instanceof Error ? error.message : "Failed to take photo",
+        fileName: undefined,
+        mimeType: undefined,
+        text: undefined,
+        fileUrl: undefined,
       }]);
-      setStatus("error");
     }
   };
 
@@ -355,22 +398,32 @@ export default function HomeScreen() {
   );
 
   const renderProcessingStatus = () => {
-    const lastResult = uploadResults[uploadResults.length - 1];
-    const displayStatus = status;
-    const displayResult = lastResult?.text !== undefined ? lastResult.text : lastResult?.error;
-    const displayFileUrl = lastResult?.fileUrl;
-    const displayMimeType = lastResult?.mimeType;
-    const displayFileName = uploadResults.length > 1 ? `${uploadResults.length} files` : lastResult?.fileName;
+    if (status === 'uploading' || status === 'processing') {
+      const fileCount = uploadResults.length;
+      const message = status === 'uploading' ? `Starting upload for ${fileCount} file${fileCount > 1 ? 's' : ''}...`
+                                           : `Processing ${fileCount} file${fileCount > 1 ? 's' : ''}...`;
+      return (
+        <ProcessingStatus
+          status={status}
+          result={message}
+          fileName={fileCount === 1 ? uploadResults[0]?.fileName : (fileCount > 1 ? `${fileCount} files` : undefined)}
+          onRetry={handleRetry}
+          showDetails={false}
+        />
+      );
+    }
+
+    const firstErrorResult = status === 'error' ? uploadResults.find(r => r?.status === 'error') : null;
+    const displayResult = status === 'error' ? (firstErrorResult?.error || 'An error occurred during processing') : undefined;
+    const fileCount = uploadResults.length;
 
     return (
       <ProcessingStatus
-        status={displayStatus}
+        status={status}
         result={displayResult}
-        fileUrl={displayFileUrl}
-        mimeType={displayMimeType}
-        fileName={displayFileName}
+        fileName={fileCount === 1 ? uploadResults[0]?.fileName : (fileCount > 1 ? `${fileCount} files` : undefined)}
         onRetry={handleRetry}
-        showDetails={true}
+        showDetails={status === 'error'}
       />
     );
   };
