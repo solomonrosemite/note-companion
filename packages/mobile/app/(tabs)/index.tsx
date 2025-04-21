@@ -31,7 +31,7 @@ import { UsageStatus } from "@/components/usage-status";
 export default function HomeScreen() {
   const { getToken } = useAuth();
   const router = useRouter();
-  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [uploadResults, setUploadResults] = useState<(UploadResult | null)[]>([]);
   const [status, setStatus] = useState<UploadStatus>("idle");
   const params = useLocalSearchParams<{ sharedFile?: string }>();
   // TODO: Uncomment to re-enable share intent functionality
@@ -73,11 +73,11 @@ export default function HomeScreen() {
             
             console.log(`ShareIntent: Processing file with path=${file.path}, mimeType=${mimeType}, fileName=${file.fileName}`);
             
-            await uploadFile({
+            await uploadFiles([{
               uri: file.path,
               mimeType: mimeType,
               name: file.fileName,
-            });
+            }]);
           } else if (shareIntent.text) {
             // Handle shared text (could save as markdown or process differently)
             const textFile = {
@@ -87,14 +87,14 @@ export default function HomeScreen() {
               text: shareIntent.text
             };
             
-            await uploadFile(textFile);
+            await uploadFiles([textFile]);
           }
         } catch (error) {
           console.error('Error handling shared content:', error);
-          setUploadResult({
+          setUploadResults([{
             status: 'error',
             error: error instanceof Error ? error.message : 'Failed to process shared content'
-          });
+          }]);
           setStatus('error');
         }
       }
@@ -110,13 +110,13 @@ export default function HomeScreen() {
       if (params.sharedFile) {
         try {
           const fileData = JSON.parse(params.sharedFile);
-          await uploadFile(fileData);
+          await uploadFiles([fileData]);
         } catch (error) {
           console.error('Error handling shared file:', error);
-          setUploadResult({
+          setUploadResults([{
             status: 'error',
             error: error instanceof Error ? error.message : 'Failed to process shared file'
-          });
+          }]);
           setStatus('error');
         }
       }
@@ -125,33 +125,40 @@ export default function HomeScreen() {
     handleSharedFile();
   }, [params.sharedFile]);
 
-  const uploadFile = async (file: SharedFile) => {
+  const uploadFiles = async (files: SharedFile[]) => {
     try {
       // Reset state
-      setStatus("idle");
-      setUploadResult(null);
+      setStatus("uploading");
+      setUploadResults([]);
 
       const token = await getToken();
       if (!token) {
         throw new Error("Authentication required");
       }
 
-      // Process the file using our shared utility
-      const result = await handleFileProcess(
-        file,
-        token,
-        (newStatus) => setStatus(newStatus)
-      );
+      const results: (UploadResult | null)[] = [];
+      let overallStatus: UploadStatus = "completed";
 
-      // Update state with the result
-      setUploadResult(result);
-      setStatus(result.status);
+      for (const file of files) {
+        const result = await handleFileProcess(
+          file,
+          token,
+          (newStatus) => setStatus(newStatus)
+        );
+        results.push(result);
+        if (result.status === "error") {
+          overallStatus = "error";
+        }
+      }
+
+      setUploadResults(results);
+      setStatus(overallStatus);
     } catch (error) {
       console.error("Upload error:", error);
-      setUploadResult({
+      setUploadResults([{
         status: "error",
         error: error instanceof Error ? error.message : "Upload failed",
-      });
+      }]);
       setStatus("error");
     }
   };
@@ -160,16 +167,19 @@ export default function HomeScreen() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/pdf", "image/*"],
+        multiple: true,
       });
 
       if (result.canceled) return;
-      await uploadFile(result.assets[0]);
+      if (result.assets && result.assets.length > 0) {
+        await uploadFiles(result.assets);
+      }
     } catch (error) {
       console.error("Error picking document:", error);
-      setUploadResult({ 
-        status: "error", 
-        error: error instanceof Error ? error.message : "Failed to pick document" 
-      });
+      setUploadResults([{
+        status: "error",
+        error: error instanceof Error ? error.message : "Failed to pick document"
+      }]);
       setStatus("error");
     }
   };
@@ -179,10 +189,10 @@ export default function HomeScreen() {
       const { status: permissionStatus } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionStatus !== "granted") {
-        setUploadResult({
+        setUploadResults([{
           status: "error",
           error: "Gallery permission denied",
-        });
+        }]);
         setStatus("error");
         return;
       }
@@ -195,17 +205,15 @@ export default function HomeScreen() {
 
       if (result.canceled) return;
 
-      // Upload the first selected photo for now
-      // TODO: Add support for multiple file uploads
-      if (result.assets.length > 0) {
-        await uploadFile(result.assets[0]);
+      if (result.assets && result.assets.length > 0) {
+        await uploadFiles(result.assets);
       }
     } catch (error) {
       console.error("Error picking photos:", error);
-      setUploadResult({ 
-        status: "error", 
-        error: error instanceof Error ? error.message : "Failed to pick photos" 
-      });
+      setUploadResults([{
+        status: "error",
+        error: error instanceof Error ? error.message : "Failed to pick photos"
+      }]);
       setStatus("error");
     }
   };
@@ -215,10 +223,10 @@ export default function HomeScreen() {
       const { status: cameraStatus } =
         await ImagePicker.requestCameraPermissionsAsync();
       if (cameraStatus !== "granted") {
-        setUploadResult({ 
-          status: "error", 
-          error: "Camera permission denied" 
-        });
+        setUploadResults([{
+          status: "error",
+          error: "Camera permission denied"
+        }]);
         setStatus("error");
         return;
       }
@@ -229,20 +237,22 @@ export default function HomeScreen() {
       });
 
       if (result.canceled) return;
-      await uploadFile(result.assets[0]);
+      if (result.assets && result.assets.length > 0) {
+        await uploadFiles(result.assets);
+      }
     } catch (error) {
       console.error("Error taking photo:", error);
-      setUploadResult({ 
-        status: "error", 
-        error: error instanceof Error ? error.message : "Failed to take photo" 
-      });
+      setUploadResults([{
+        status: "error",
+        error: error instanceof Error ? error.message : "Failed to take photo"
+      }]);
       setStatus("error");
     }
   };
 
   const handleRetry = () => {
     setStatus("idle");
-    setUploadResult(null);
+    setUploadResults([]);
   };
 
   const renderHeader = () => (
@@ -290,8 +300,8 @@ export default function HomeScreen() {
           <View style={styles.uploadButtonGradient}></View>
           <View style={styles.uploadButtonContent}>
             <MaterialIcons name="file-upload" size={32} color={primaryColor} />
-            <Text style={styles.uploadButtonText}>Upload File</Text>
-            <Text style={styles.uploadButtonSubtext}>PDF or Image</Text>
+            <Text style={styles.uploadButtonText}>Upload Files</Text>
+            <Text style={styles.uploadButtonSubtext}>PDFs or Images</Text>
           </View>
         </TouchableOpacity>
 
@@ -329,7 +339,6 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
         
-        {/* Empty placeholder to maintain grid layout */}
         <View style={styles.uploadButtonWrapper} />
       </View>
     </View>
@@ -345,6 +354,27 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
+  const renderProcessingStatus = () => {
+    const lastResult = uploadResults[uploadResults.length - 1];
+    const displayStatus = status;
+    const displayResult = lastResult?.text !== undefined ? lastResult.text : lastResult?.error;
+    const displayFileUrl = lastResult?.fileUrl;
+    const displayMimeType = lastResult?.mimeType;
+    const displayFileName = uploadResults.length > 1 ? `${uploadResults.length} files` : lastResult?.fileName;
+
+    return (
+      <ProcessingStatus
+        status={displayStatus}
+        result={displayResult}
+        fileUrl={displayFileUrl}
+        mimeType={displayMimeType}
+        fileName={displayFileName}
+        onRetry={handleRetry}
+        showDetails={true}
+      />
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       {renderHeader()}
@@ -354,15 +384,7 @@ export default function HomeScreen() {
           {renderUsageStatus()}
           {renderUploadButtons()}
           
-          <ProcessingStatus
-            status={status}
-            result={uploadResult?.text !== undefined ? uploadResult.text : uploadResult?.error}
-            fileUrl={uploadResult?.fileUrl}
-            mimeType={uploadResult?.mimeType}
-            fileName={uploadResult?.fileName}
-            onRetry={handleRetry}
-            showDetails={true}
-          />
+          {renderProcessingStatus()}
 
           {renderHelpLink()}
         </View>
