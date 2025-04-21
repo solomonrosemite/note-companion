@@ -312,55 +312,6 @@ export const uploadFile = async (
 };
 
 /**
- * Process the file on the server to extract text content and metadata
- * NOTE: This function might become less relevant or change if processing
- * is solely handled by the background worker.
- * For now, it might trigger the worker or be used for text files.
- */
-export const processFile = async (fileId: string | number, token: string): Promise<void> => {
-  try {
-    // Ensure fileId is a string for the API call
-    const fileIdStr = String(fileId);
-    console.log("Requesting processing for file ID:", fileIdStr);
-
-    // If it's a local text ID (should be handled by uploadFile now), maybe skip?
-    // Or let the endpoint handle it if it still exists.
-    if (fileIdStr.startsWith('local-text-')) {
-      console.log('Local text ID detected in processFile, skipping server processing call.');
-      return;
-    }
-
-    // Call the existing /api/process-file endpoint.
-    // The background worker might make this redundant for R2 uploads later.
-    const response = await fetch(`${API_URL}/api/process-file`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ fileId: fileIdStr }), // Send as string
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error triggering file processing: ${response.status} ${response.statusText}`, errorText);
-      // Decide if this should throw or just log, depending on whether the background worker is the primary path
-      // For now, logging the error.
-      // throw new Error(`Failed to trigger file processing: ${response.statusText}`);
-      console.warn("Failed to trigger processing via /api/process-file. Background worker should handle it.");
-    } else {
-       console.log("File processing request sent successfully (or already processed)");
-    }
-
-  } catch (error) {
-    console.error('Error in processFile request:', error);
-    // Depending on strategy, might not throw here if background worker is primary
-     console.warn("Error sending processing request via /api/process-file. Background worker should handle it.");
-    // throw error;
-  }
-};
-
-/**
  * Polls the server for results of file processing
  * This now needs to poll a new status endpoint for R2 uploads
  */
@@ -490,7 +441,7 @@ export const pollForResults = async (
 };
 
 /**
- * Handles the entire file processing workflow: upload, (optionally trigger process), and poll for results
+ * Handles the entire file processing workflow: upload, trigger process, and poll for results
  */
 export const handleFileProcess = async (
   file: SharedFile,
@@ -509,34 +460,63 @@ export const handleFileProcess = async (
       // If upload itself failed, report error immediately
       throw new Error(uploadData.error || 'File upload failed without specific error');
     }
-    
+
     // Notify with details after successful upload initiation
-    onStatusChange?.('processing', { 
-      fileId: uploadData.fileId, 
-      url: uploadData.url, 
-      mimeType: uploadData.mimeType, 
-      fileName: uploadData.fileName 
+    // Status might be 'pending' for R2 or 'completed' for direct text upload
+    onStatusChange?.('processing', {
+      fileId: uploadData.fileId,
+      url: uploadData.url,
+      mimeType: uploadData.mimeType,
+      fileName: uploadData.fileName
     });
 
-    // Determine if it was a text file upload (based on mime type in response)
-    const isTextFile = uploadData.mimeType?.startsWith('text/') ?? false;
+    // Determine if it was a direct text upload (which is already completed)
+    const isDirectTextUploadComplete = (uploadData.mimeType?.startsWith('text/') ?? false) && uploadData.status === 'completed';
 
-    // If it's a text file uploaded directly, it's already considered completed
-    if (isTextFile && uploadData.status === 'completed') {
-        console.log("Text file upload completed directly.");
+    if (!isDirectTextUploadComplete) {
+      // --- Trigger Backend Processing ---
+      console.log(`Triggering backend processing for file ID: ${uploadData.fileId}`);
+      try {
+        const processResponse = await fetch(`${API_URL}/api/process-file`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`, // Reuse token
+          },
+          body: JSON.stringify({ fileId: uploadData.fileId }),
+        });
+
+        if (!processResponse.ok) {
+          // Log error, but continue to polling as backend might recover or finish anyway
+          const errorText = await processResponse.text();
+          console.error(`Attempt to trigger /api/process-file for ${uploadData.fileId} failed: ${processResponse.status} - ${errorText}`);
+        } else {
+          const processResult = await processResponse.json();
+          console.log(`Successfully triggered processing via /api/process-file for ${uploadData.fileId}. Initial Response:`, processResult);
+          // Optional: Check processResult here if needed, e.g., if it returns immediate success/failure
+        }
+      } catch (triggerError) {
+        console.error(`Error calling /api/process-file for ${uploadData.fileId}:`, triggerError);
+        // Continue to polling even if triggering fails
+      }
+      // --- End Trigger Block ---
+    }
+
+    // Always poll for results, unless it was a direct text upload already completed
+    if (isDirectTextUploadComplete) {
+        console.log("Direct text upload completed, creating final result object.");
         result = {
             status: 'completed',
-            text: uploadData.text, // Text should be in the uploadData for text files
+            text: uploadData.text,
             fileId: uploadData.fileId,
             url: uploadData.url,
             mimeType: uploadData.mimeType,
             fileName: uploadData.fileName,
         };
     } else {
-        // For binary files (or text files needing server processing if flow changes),
-        // poll for results using the new status endpoint
-        console.log(`Polling for results for fileId: ${uploadData.fileId}`);
-        result = await pollForResults(uploadData.fileId, token, false); // Pass isTextFile=false for R2 uploads
+        console.log(`Polling for final results for fileId: ${uploadData.fileId}`);
+        // Pass isTextFile=false because /api/process-file handles all types now
+        result = await pollForResults(uploadData.fileId, token, false);
     }
 
     // Add details from uploadData if missing in poll result
@@ -550,18 +530,18 @@ export const handleFileProcess = async (
         result.fileName = uploadData.fileName;
     }
 
-    onStatusChange?.(result.status, { 
-        fileId: result.fileId, 
-        url: result.url, 
-        mimeType: result.mimeType, 
-        fileName: result.fileName 
+    // Notify final status
+    onStatusChange?.(result.status, {
+        fileId: result.fileId,
+        url: result.url,
+        mimeType: result.mimeType,
+        fileName: result.fileName
     });
     return result;
 
   } catch (error) {
     console.error('handleFileProcess error:', error);
     const errorMsg = error instanceof Error ? error.message : 'Failed to process file';
-    // Attempt to get fileId even in case of error
     const fileIdOnError = uploadData?.fileId;
     result = {
       status: 'error',
@@ -571,11 +551,11 @@ export const handleFileProcess = async (
       mimeType: uploadData?.mimeType,
       fileName: uploadData?.fileName,
     };
-    onStatusChange?.('error', { 
-        fileId: result.fileId, 
-        url: result.url, 
-        mimeType: result.mimeType, 
-        fileName: result.fileName 
+    onStatusChange?.('error', {
+        fileId: result.fileId,
+        url: result.url,
+        mimeType: result.mimeType,
+        fileName: result.fileName
     });
     return result;
   }

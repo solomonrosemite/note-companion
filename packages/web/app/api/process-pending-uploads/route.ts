@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, uploadedFiles, UploadedFile } from "@/drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Mistral } from "@mistralai/mistralai";
 import { incrementAndLogTokenUsage } from "@/lib/incrementAndLogTokenUsage";
@@ -174,6 +174,84 @@ async function processImageWithGPT4o(imageUrl: string): Promise<{ textContent: s
   }
 }
 
+// --- Reusable Processing Function ---
+async function processSingleFileRecord(fileRecord: UploadedFile): Promise<{ status: 'completed' | 'error'; textContent: string | null; tokensUsed: number; error: string | null; }> {
+  const fileId = fileRecord.id;
+  let textContent = "";
+  let tokensUsed = 0;
+  let processingError: string | null = null;
+
+  try {
+    console.log(`Starting single file processing for ID: ${fileId}`);
+
+    // Determine R2 key
+    let r2Key = fileRecord.r2Key;
+    if (!r2Key) {
+        // Basic parsing - assumes URL structure like .../uploads/userId/uuid-filename
+        const urlParts = fileRecord.blobUrl.split('/');
+        // Find the 'uploads' segment and take everything after it
+        const uploadSegmentIndex = urlParts.findIndex(part => part === 'uploads');
+        if (uploadSegmentIndex !== -1 && uploadSegmentIndex < urlParts.length - 1) {
+            r2Key = urlParts.slice(uploadSegmentIndex).join('/');
+             console.log(`Derived R2 key from blobUrl: ${r2Key}`);
+        } else {
+             throw new Error(`Could not determine R2 key from blobUrl: ${fileRecord.blobUrl}`);
+        }
+    }
+    if (!r2Key) {
+         throw new Error(`Missing R2 key for file ID ${fileId}`);
+    }
+
+    // Download file from R2
+    const buffer = await downloadFromR2(r2Key);
+
+    const fileType = fileRecord.fileType.toLowerCase();
+
+    // --- Processing Logic ---
+    if (fileType === "application/pdf" || fileType.includes("pdf")) {
+      // TODO: Implement PDF processing logic if needed
+      console.warn(`PDF processing (${fileId}) in background worker needs full implementation`);
+      processingError = "PDF processing not yet fully implemented.";
+      textContent = "[PDF Content - Processing Pending Implementation]";
+      tokensUsed = 0;
+    } else if (fileType.startsWith("image/")) {
+      console.log(`Processing Image (${fileId}) using GPT-4o with URL: ${fileRecord.blobUrl}`);
+      const result = await processImageWithGPT4o(fileRecord.blobUrl); // Use the correct public URL
+      textContent = result.textContent;
+      tokensUsed = result.tokensUsed;
+      // Check if the processing function itself returned an error message
+      if (textContent.startsWith("Error processing image")) {
+        processingError = textContent; // Capture the error message from the helper
+      }
+    } else {
+      console.warn(`Unsupported file type for processing: ${fileType}`);
+      processingError = `Unsupported file type: ${fileType}`;
+    }
+    // --- End Processing Logic ---
+
+    // Final check for empty content *only if there wasn't already an error*
+    if (!processingError && (!textContent || textContent.trim() === "")) {
+      console.warn(`No text content extracted for file ${fileId}`);
+      textContent = "[OCR completed, but no text extracted]"; // Indicate OCR ran but found nothing
+    }
+
+  } catch (error: unknown) {
+    console.error(`Error during single file processing ${fileId}:`, error);
+    processingError = error instanceof Error ? error.message : "Unknown processing error";
+    // Ensure textContent is nullified if an overarching error occurred
+    textContent = null;
+    tokensUsed = 0;
+  }
+
+  const finalStatus = processingError ? "error" : "completed";
+  console.log(`Single file processing result for ${fileId}: Status=${finalStatus}, Error=${processingError}`);
+  return {
+    status: finalStatus,
+    textContent: processingError ? null : textContent, // Return null textContent on error
+    tokensUsed: processingError ? 0 : tokensUsed,    // Return 0 tokensUsed on error
+    error: processingError,
+  };
+}
 
 // --- Main Worker Logic --- //
 
@@ -194,7 +272,8 @@ export async function GET(request: NextRequest) {
     const pendingFiles = await db
       .select()
       .from(uploadedFiles)
-      .where(eq(uploadedFiles.status, "pending"))
+      // Fetch 'pending' or 'processing' (in case a previous run timed out after marking as processing)
+      .where(or(eq(uploadedFiles.status, "pending"), eq(uploadedFiles.status, "processing")))
       .limit(10); // Process up to 10 files per run
 
     if (pendingFiles.length === 0) {
@@ -202,129 +281,75 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "No pending files" });
     }
 
-    console.log(`Found ${pendingFiles.length} pending files to process.`);
+    console.log(`Found ${pendingFiles.length} pending/processing files to attempt.`);
 
     // 3. Process each file
     for (const fileRecord of pendingFiles) {
       const fileId = fileRecord.id;
       const userId = fileRecord.userId;
-      let textContent = "";
-      let tokensUsed = 0;
-      let processingError: string | null = null;
 
       try {
-        console.log(`Processing file ID: ${fileId}`);
-
-        // Update status to processing
-        await db
-          .update(uploadedFiles)
-          .set({ status: "processing", updatedAt: new Date() })
-          .where(eq(uploadedFiles.id, fileId));
-
-        // Determine R2 key (prefer r2Key if available, fallback to parsing blobUrl)
-        let r2Key = fileRecord.r2Key;
-        if (!r2Key) {
-            // Basic parsing - assumes URL structure like .../uploads/userId/uuid-filename
-            const urlParts = fileRecord.blobUrl.split('/');
-            // Find the 'uploads' segment and take everything after it
-            const uploadSegmentIndex = urlParts.findIndex(part => part === 'uploads');
-            if (uploadSegmentIndex !== -1 && uploadSegmentIndex < urlParts.length - 1) {
-                r2Key = urlParts.slice(uploadSegmentIndex).join('/');
-                 console.log(`Derived R2 key from blobUrl: ${r2Key}`);
-            } else {
-                 throw new Error(`Could not determine R2 key from blobUrl: ${fileRecord.blobUrl}`);
-            }
-        }
-        if (!r2Key) {
-             throw new Error(`Missing R2 key for file ID ${fileId}`);
-        }
-
-        // Download file from R2
-        const buffer = await downloadFromR2(r2Key);
-
-        const fileType = fileRecord.fileType.toLowerCase();
-        const mistralApiKey = process.env.MISTRAL_API_KEY;
-
-        // --- Processing Logic (Adapted from process-file) ---
-        if (fileType === "application/pdf" || fileType.includes("pdf")) {
-          console.log(`Processing PDF: ${fileId}`);
-          if (!mistralApiKey) throw new Error("Mistral API key needed for PDF processing");
-          const mistralClient = new Mistral({ apiKey: mistralApiKey });
-          // PDFs require upload + OCR process via Mistral API
-          // TODO: Refactor Mistral PDF processing steps here
-          // For now, placeholder error
-          // This requires uploading the buffer back to Mistral or finding a direct buffer OCR method
-           console.warn("PDF processing in background worker needs implementation (Mistral upload/process)");
-           processingError = "PDF processing not yet fully implemented in background worker.";
-           // TEMP: Use placeholder until implemented
-           textContent = "[PDF Content - Processing Pending Implementation]";
-           tokensUsed = 0;
-
-        } else if (fileType.startsWith("image/")) {
-           console.log(`Processing Image: ${fileId} using GPT-4o`);
-           // Use GPT-4o via the public URL
-           const result = await processImageWithGPT4o(fileRecord.blobUrl);
-           textContent = result.textContent;
-           tokensUsed = result.tokensUsed;
-           if (textContent.startsWith("Error processing image")) {
-               processingError = textContent; // Capture error message
-           }
+        // Optimistically update status to processing *before* heavy lifting
+        // This helps identify files that might timeout during processing
+        if (fileRecord.status !== 'processing') {
+            await db
+              .update(uploadedFiles)
+              .set({ status: "processing", updatedAt: new Date(), error: null }) // Clear previous error on retry
+              .where(eq(uploadedFiles.id, fileId));
+             console.log(`Marked file ${fileId} as processing.`);
         } else {
-          // Handle other file types if necessary
-          console.warn(`Unsupported file type for processing: ${fileType}`);
-          processingError = `Unsupported file type: ${fileType}`;
-        }
-        // --- End Processing Logic ---
-
-        // Final check for empty content
-        if (!processingError && (!textContent || textContent.trim() === "")) {
-          console.warn(`No text content extracted for file ${fileId}`);
-          textContent = "[OCR completed, but no text extracted]";
+             console.log(`File ${fileId} was already marked as processing, retrying...`);
         }
 
-      } catch (error: unknown) {
-        console.error(`Error processing file ${fileId}:`, error);
-        processingError = error instanceof Error ? error.message : "Unknown processing error";
-        errorCount++;
-      }
 
-      // 4. Update Database Record
-      try {
-        const finalStatus = processingError ? "error" : "completed";
+        // Call the reusable processing function
+        const result = await processSingleFileRecord(fileRecord);
+
+        // 4. Update Database Record with the final result
         await db
           .update(uploadedFiles)
           .set({
-            status: finalStatus,
-            textContent: processingError ? null : textContent, // Don't save partial text on error
-            tokensUsed: processingError ? 0 : tokensUsed,
-            error: processingError,
+            status: result.status,
+            textContent: result.textContent,
+            tokensUsed: result.tokensUsed,
+            error: result.error, // Store error message if processing failed
             updatedAt: new Date(),
           })
           .where(eq(uploadedFiles.id, fileId));
 
-        console.log(`Finished processing file ${fileId} with status: ${finalStatus}`);
-        if (finalStatus === 'completed') {
+        console.log(`Finished processing file ${fileId} with final status: ${result.status}`);
+
+        // 5. Increment Token Usage (only on successful completion)
+        if (result.status === 'completed' && result.tokensUsed > 0) {
              processedCount++;
-             // 5. Increment Token Usage (only on success)
              try {
-                  await incrementAndLogTokenUsage(userId, tokensUsed);
-                  console.log(`Incremented token usage for user ${userId} by ${tokensUsed}`);
+                  await incrementAndLogTokenUsage(userId, result.tokensUsed);
+                  console.log(`Incremented token usage for user ${userId} by ${result.tokensUsed}`);
              } catch (tokenError) {
                   console.error(`Failed to increment token usage for user ${userId} after processing file ${fileId}:`, tokenError);
                   // Don't mark the file processing as failed, but log the issue
              }
-        } else {
+        } else if (result.status === 'error') {
              errorCount++;
+        } else {
+             processedCount++; // Count as processed even if no tokens were used (e.g., empty extraction)
         }
-      } catch (dbError: unknown) {
-        console.error(`Failed to update database for file ${fileId}:`, dbError);
-        // This is serious, might need alerting
-        errorCount++; // Count as error if DB update fails
+      } catch (dbUpdateError: unknown) { // Catch errors specifically from DB updates or other unexpected issues within the loop
+        console.error(`Critical error during processing loop for file ${fileId}:`, dbUpdateError);
+        errorCount++;
+        // Attempt to mark the file as error in DB if something unexpected happened
+        try {
+            await db.update(uploadedFiles)
+              .set({ status: 'error', error: `Processing Loop Error: ${dbUpdateError instanceof Error ? dbUpdateError.message : String(dbUpdateError)}`, updatedAt: new Date() })
+              .where(eq(uploadedFiles.id, fileId));
+        } catch (finalDbError) {
+            console.error(`Failed even to mark file ${fileId} as error after critical loop failure:`, finalDbError);
+        }
       }
     } // End loop through pending files
 
     return NextResponse.json({
-      message: `Processing complete. Processed: ${processedCount}, Errors: ${errorCount}`,
+      message: `Processing complete. Attempted: ${pendingFiles.length}, Succeeded: ${processedCount}, Errors: ${errorCount}`,
     });
 
   } catch (error: unknown) {

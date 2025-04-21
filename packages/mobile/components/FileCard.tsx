@@ -338,16 +338,6 @@ export function FileCard({ file, onDelete, onView }: FileCardProps) {
               </ThemedText>
             </View>
             
-            {/* Word count if text is available */}
-            {file.extractedText && (
-              <View style={styles.metadataItem}>
-                <MaterialIcons name="description" size={16} color="rgb(159, 122, 234)" />
-                <ThemedText colorName="textSecondary" style={styles.metadataText}>
-                  {`${Math.ceil(file.extractedText.length / 100)} words`}
-                </ThemedText>
-              </View>
-            )}
-            
             {/* Creation date */}
             <View style={styles.metadataItem}>
               <MaterialIcons name="access-time" size={16} color="rgb(159, 122, 234)" />
